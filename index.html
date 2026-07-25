@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logbook">
+<meta name="robots" content="noindex, nofollow">
+<title>Logbook — Health &amp; Fitness</title>
+<style>
+:root{
+  --bg:#EEF2EF;
+  --surface:#FFFFFF;
+  --surface-2:#E4E9E5;
+  --ink:#182420;
+  --ink-dim:#5B6660;
+  --hair:#D2D9D4;
+  --accent:#2F6F5E;
+  --accent-dim:#DCE9E4;
+  --rust:#B65C3F;
+  --rust-dim:#F3E3DC;
+  --good:#2F6F5E;
+  --bad:#A63D3D;
+  --warn:#B08A2E;
+  --radius:14px;
+  --serif: Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --mono: "SF Mono", "Menlo", "Consolas", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom));min-height:100vh;}
+h1,h2,h3{font-family:var(--serif);font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+a{color:inherit;}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 14px) 18px 10px;border-bottom:1px solid var(--hair);}
+.topbar .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-dim);}
+.topbar h1{font-size:22px;}
+.topbar .sub{font-size:13px;color:var(--ink-dim);}
+
+main{padding:16px 16px 24px;max-width:640px;margin:0 auto;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* Cards */
+.card{background:var(--surface);border-radius:var(--radius);padding:16px 16px;margin-bottom:14px;border:1px solid var(--hair);}
+.card h2{font-size:15px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-dim);font-family:var(--sans);font-weight:700;margin-bottom:12px;}
+.card h2 .icon{margin-right:6px;}
+.card-empty{color:var(--ink-dim);font-size:13px;font-style:italic;padding:6px 0;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.metric{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--hair);}
+.metric:last-child{border-bottom:none;}
+.metric .label{font-size:12px;color:var(--ink-dim);}
+.metric .value{font-size:19px;font-weight:600;font-family:var(--mono);}
+.value.good{color:var(--good);}
+.value.bad{color:var(--bad);}
+.value.warn{color:var(--warn);}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* Nav */
+nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--hair);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10;}
+nav.tabbar button{flex:1;background:none;border:none;padding:10px 2px 8px;font-family:var(--sans);font-size:10.5px;color:var(--ink-dim);display:flex;flex-direction:column;align-items:center;gap:3px;letter-spacing:0.02em;}
+nav.tabbar button .glyph{font-size:19px;line-height:1;}
+nav.tabbar button.active{color:var(--accent);font-weight:700;}
+
+/* Forms */
+label.field{display:block;margin-bottom:12px;}
+label.field .flabel{display:block;font-size:12.5px;color:var(--ink-dim);margin-bottom:4px;}
+input,select,textarea{width:100%;font-family:var(--sans);font-size:16px;padding:10px 11px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);color:var(--ink);}
+input.num-input,input[type=number]{font-family:var(--mono);}
+textarea{resize:vertical;min-height:50px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.checkline{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.checkline input{width:auto;}
+
+fieldset{border:none;padding:0;margin:0 0 6px;}
+.section-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:8px 0;font-family:var(--sans);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-dim);border-bottom:1px solid var(--hair);margin-bottom:10px;}
+.section-toggle .car{transition:transform .15s;}
+.section-toggle.open .car{transform:rotate(90deg);}
+.collapsible{display:none;}
+.collapsible.open{display:block;}
+
+button.btn{font-family:var(--sans);font-weight:700;font-size:15px;padding:13px;border-radius:10px;border:none;background:var(--accent);color:#fff;width:100%;letter-spacing:0.01em;}
+button.btn.secondary{background:var(--surface-2);color:var(--ink);}
+button.btn.rust{background:var(--rust);}
+button.btn-sm{font-size:12.5px;padding:7px 12px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-dim);font-family:var(--sans);}
+button.btn-sm.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+
+/* Insights */
+.corr-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--hair);gap:10px;}
+.corr-row:last-child{border-bottom:none;}
+.corr-label{font-size:13.5px;flex:1;}
+.corr-strength{font-family:var(--mono);font-size:13px;width:52px;text-align:right;}
+.tag{font-size:10px;font-family:var(--sans);text-transform:uppercase;letter-spacing:0.04em;padding:2px 6px;border-radius:5px;background:var(--surface-2);color:var(--ink-dim);}
+.tag.sig{background:var(--accent-dim);color:var(--accent);}
+.insight-sentence{font-size:13.5px;line-height:1.5;padding:10px 0;border-bottom:1px dashed var(--hair);}
+.insight-sentence:last-child{border-bottom:none;}
+.confidence-note{font-size:11.5px;color:var(--ink-dim);font-style:italic;margin-top:2px;}
+
+/* History */
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--hair);}
+.hist-row .d{font-family:var(--mono);font-size:13px;}
+.hist-row .w{font-family:var(--mono);font-weight:700;}
+.hist-row .tags{font-size:11px;color:var(--ink-dim);}
+
+.date-range-bar{display:flex;gap:6px;margin-bottom:14px;}
+.date-range-bar button{flex:1;}
+
+svg.chart{width:100%;height:auto;display:block;}
+.chart-caption{font-size:11.5px;color:var(--ink-dim);margin-top:6px;text-align:center;}
+
+.stamp{font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;border:1px solid var(--hair);display:inline-block;padding:3px 8px;border-radius:6px;margin-bottom:10px;}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;}
+.toast.show{opacity:0.95;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="eyebrow" id="topEyebrow">Logbook</div>
+  <h1 id="topTitle">Today</h1>
+  <div class="sub" id="topSub"></div>
+</div>
+
+<main>
+  <section id="screen-today" class="screen active"></section>
+  <section id="screen-dashboard" class="screen"></section>
+  <section id="screen-trends" class="screen"></section>
+  <section id="screen-insights" class="screen"></section>
+  <section id="screen-history" class="screen"></section>
+  <section id="screen-settings" class="screen"></section>
+</main>
+
+<nav class="tabbar">
+  <button data-screen="today" class="active"><span class="glyph">&#9998;</span>Today</button>
+  <button data-screen="dashboard"><span class="glyph">&#9633;</span>Dashboard</button>
+  <button data-screen="trends"><span class="glyph">&#8599;</span>Trends</button>
+  <button data-screen="insights"><span class="glyph">&#10022;</span>Insights</button>
+  <button data-screen="history"><span class="glyph">&#8801;</span>History</button>
+  <button data-screen="settings"><span class="glyph">&#9881;</span>Settings</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script id="seed-data" type="application/json">
+[]
+</script>
+
+<script>
+/* =========================================================
+   LOGBOOK — personal health & fitness tracker
+   Vanilla JS, localStorage-backed, single file, offline-first.
+   ========================================================= */
+
+/* ---------- Storage keys ---------- */
+const K_DAYS = 'logbook_days_v1';
+const K_SETTINGS = 'logbook_settings_v1';
+
+const DEFAULT_SETTINGS = {
+  startDate: '',
+  startWeight: null,
+  goalWeight: null,
+  stepGoal: 10000,
+  proteinGoal: 150,
+  weekStart: 'monday', // monday | sunday
+  units: 'lbs-in',
+  activityList: ['walk/hike', 'ryan', 'run', 'bike'],
+  glp1DrugDefault: '',
+  trendWindow: 28 // default dashboard trend window in days
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(K_SETTINGS);
+    if (raw) return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+  } catch (e) {}
+  return Object.assign({}, DEFAULT_SETTINGS);
+}
+function saveSettings(s) { localStorage.setItem(K_SETTINGS, JSON.stringify(s)); }
+
+function loadDays() {
+  try {
+    const raw = localStorage.getItem(K_DAYS);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+function saveDays(daysObj) { localStorage.setItem(K_DAYS, JSON.stringify(daysObj)); }
+
+/* ---------- Bootstrapping / seed ---------- */
+let SETTINGS = loadSettings();
+let DAYS = loadDays(); // object keyed by date -> raw input record
+
+if (!DAYS) {
+  // first run: seed from embedded historical export
+  const seedEl = document.getElementById('seed-data');
+  let seed = [];
+  try { seed = JSON.parse(seedEl.textContent); } catch (e) { seed = []; }
+  DAYS = {};
+  seed.forEach(r => { DAYS[r.date] = r; });
+  saveDays(DAYS);
+}
+
+/* ---------- Utility: dates ---------- */
+function toDate(str) { const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(str, n) { const d = toDate(str); d.setDate(d.getDate()+n); return fmtDate(d); }
+function todayStr() { return fmtDate(new Date()); }
+function dayOfWeekIdx(str) { return toDate(str).getDay(); } // 0=Sun
+function isWeekend(str) { const dw = dayOfWeekIdx(str); return dw === 0 || dw === 6; }
+function monthOf(str) { return Number(str.split('-')[1]); }
+function quarterOf(str) { return Math.ceil(monthOf(str)/3); }
+function prettyDate(str) {
+  const d = toDate(str);
+  return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+}
+// week key: Monday-start or Sunday-start bucket, returns the bucket's start date string
+function weekStartOf(str) {
+  const d = toDate(str);
+  const dw = d.getDay(); // 0=Sun..6=Sat
+  let offset;
+  if (SETTINGS.weekStart === 'monday') {
+    offset = (dw === 0) ? -6 : 1 - dw; // Monday of that week
+  } else {
+    offset = -dw; // Sunday of that week
+  }
+  d.setDate(d.getDate() + offset);
+  return fmtDate(d);
+}
+
+/* ---------- Utility: time parsing ---------- */
+// times stored as "HH:MM" 24hr strings from <input type=time>; legacy seed data pre-normalized.
+function timeToMin(t) {
+  if (!t) return null;
+  const [h,m] = t.split(':').map(Number);
+  return h*60+m;
+}
+function minToHHMM(mins) {
+  mins = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(mins/60), m = Math.round(mins%60);
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+
+/* ---------- Utility: circular time stats (sleep midpoints wrap at midnight) ---------- */
+// A naive arithmetic mean of clock-times (in minutes-of-day) breaks near midnight:
+// e.g. mean(23:00, 01:00) should be 00:00, not 12:00. These use the standard
+// circular-mean trick (average the unit-circle position, not the raw number).
+function circularMeanMinutes(values) {
+  const v = values.filter(x => x != null && !isNaN(x));
+  if (!v.length) return null;
+  let sumSin = 0, sumCos = 0;
+  v.forEach(m => { const rad = (m / 1440) * 2 * Math.PI; sumSin += Math.sin(rad); sumCos += Math.cos(rad); });
+  let angle = Math.atan2(sumSin / v.length, sumCos / v.length);
+  if (angle < 0) angle += 2 * Math.PI;
+  return (angle / (2 * Math.PI)) * 1440;
+}
+// shortest signed difference between two clock-times, in minutes, range (-720, 720]
+function circularDiffMinutes(a, b) {
+  let d = a - b;
+  d = ((d + 720) % 1440 + 1440) % 1440 - 720;
+  return d;
+}
+
+/* ---------- Utility: stats ---------- */
+function mean(arr) { const a = arr.filter(v => v!=null && !isNaN(v)); return a.length ? a.reduce((s,v)=>s+v,0)/a.length : null; }
+function stddev(arr) {
+  const a = arr.filter(v => v!=null && !isNaN(v));
+  if (a.length < 2) return null;
+  const m = mean(a);
+  const v = a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1);
+  return Math.sqrt(v);
+}
+// simple OLS linear regression over paired arrays (nulls dropped pairwise)
+function linreg(xs, ys) {
+  const px = [], py = [];
+  for (let i=0;i<xs.length;i++){
+    if (xs[i]!=null && ys[i]!=null && !isNaN(xs[i]) && !isNaN(ys[i])) { px.push(xs[i]); py.push(ys[i]); }
+  }
+  const n = px.length;
+  if (n < 3) return { n, slope:null, intercept:null, r2:null, tstat:null, seSlope:null };
+  const sx=px.reduce((a,b)=>a+b,0), sy=py.reduce((a,b)=>a+b,0);
+  const mx=sx/n, my=sy/n;
+  let sxx=0, syy=0, sxy=0;
+  for (let i=0;i<n;i++){ const dx=px[i]-mx, dy=py[i]-my; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; }
+  if (sxx === 0) return { n, slope:null, intercept:null, r2:null, tstat:null, seSlope:null };
+  const slope = sxy/sxx;
+  const intercept = my - slope*mx;
+  const r2 = (sxy*sxy)/(sxx*syy) || 0;
+  // residual std error
+  let sse = 0;
+  for (let i=0;i<n;i++){ const pred = intercept+slope*px[i]; sse += (py[i]-pred)*(py[i]-pred); }
+  const df = n-2;
+  const mse = df>0 ? sse/df : null;
+  const seSlope = (mse!=null && sxx>0) ? Math.sqrt(mse/sxx) : null;
+  const tstat = (seSlope && seSlope>0) ? slope/seSlope : null;
+  return { n, slope, intercept, r2, tstat, seSlope, df };
+}
+
+/* ---------- Legacy time text parser (for import) ---------- */
+function parseLegacyTime(s) {
+  if (!s) return null;
+  const m = /^(\d{1,2})[.:](\d{2})\s*([ap])$/i.exec(String(s).trim());
+  if (!m) return /^\d{1,2}:\d{2}$/.test(s) ? s : null;
+  let h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  const ap = m[3].toLowerCase();
+  if (ap==='p' && h!==12) h+=12;
+  if (ap==='a' && h===12) h=0;
+  return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+}
+
+/* ---------- Core derived-metrics engine ---------- */
+// Input: sorted ascending array of raw day records (with .date)
+// Output: parallel array of enriched records with all derived fields
+function computeDerivedSeries(rawDays) {
+  const n = rawDays.length;
+  const out = rawDays.map(r => Object.assign({}, r));
+
+  // weight series (prefer morning weight, fallback evening)
+  const weight = out.map(r => r.morningWeight!=null ? r.morningWeight : r.eveningWeight);
+
+  for (let i=0;i<n;i++) {
+    const r = out[i];
+    r._weight = weight[i];
+
+    // trailing windows helper
+    const win = (k) => weight.slice(Math.max(0,i-k+1), i+1);
+    r._weight7avg = mean(win(7));
+    r._weight30avg = mean(win(30));
+    r._weightDeviation7 = (r._weight!=null && r._weight7avg!=null) ? r._weight - r._weight7avg : null;
+    r._dailyWeightChange = (i>0 && weight[i]!=null && weight[i-1]!=null) ? weight[i]-weight[i-1] : null;
+    r._totalLoss = (r._weight!=null) ? SETTINGS.startWeight - r._weight : null;
+
+    // 7-day-avg change (used as regression target, smoother than raw daily change)
+    const prev7 = i>=7 ? out[i-7]._weight7avg : null;
+    r._weight7avgChange = (r._weight7avg!=null && prev7!=null) ? r._weight7avg - prev7 : null;
+
+    // ---- Sleep ----
+    const bed = timeToMin(r.toBed), wake = timeToMin(r.wakeUp);
+    let timeInBed = null, totalSleep = null, midpointLocal = null;
+    if (bed!=null && wake!=null) {
+      timeInBed = (bed >= wake) ? (1440-bed+wake) : (wake-bed);
+      totalSleep = timeInBed - (r.timeAwake||0);
+      midpointLocal = (bed + timeInBed/2);
+    }
+    r._timeInBedHrs = timeInBed!=null ? timeInBed/60 : null;
+    r._totalSleepHrs = totalSleep!=null ? totalSleep/60 : null;
+    r._sleepEfficiency = (timeInBed && totalSleep!=null) ? (totalSleep/timeInBed*100) : null;
+    r._sleepMidpointLocal = midpointLocal!=null ? minToHHMM(midpointLocal) : null;
+    r._sleepFragIndex = (r._totalSleepHrs && r.nightAwakenings!=null && r._totalSleepHrs>0) ? r.nightAwakenings/r._totalSleepHrs : null;
+
+    const sleepWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x._totalSleepHrs);
+    r._sleep7avg = mean(sleepWin(7));
+    r._sleepStdDev7 = stddev(sleepWin(7));
+
+    // ---- Circadian / travel ----
+    // Assumption: tzOffset is the destination's offset from home in hours (positive = east of home).
+    const tz = r.tzOffset || 0;
+    r._homeMidpointMin = midpointLocal!=null ? (((midpointLocal - tz*60) % 1440)+1440)%1440 : null;
+    r._homeMidpoint = r._homeMidpointMin!=null ? minToHHMM(r._homeMidpointMin) : null;
+    // "Usual" schedule = circular mean of home-adjusted midpoints from the trailing 14 NON-TRAVEL
+    // days (needs >=3 to compute). Using only non-travel days keeps the baseline from drifting
+    // during multi-day trips; circular mean avoids the midnight-wraparound error a plain average has.
+    const baselineWin = out.slice(Math.max(0,i-14), i).filter(x=>!x.travelDay).map(x=>x._homeMidpointMin);
+    const usualMid = baselineWin.length >= 3 ? circularMeanMinutes(baselineWin) : null;
+    r._circadianShiftHours = (r._homeMidpointMin!=null && usualMid!=null) ? circularDiffMinutes(r._homeMidpointMin, usualMid)/60 : null;
+    r._jetLagMagnitude = r.travelDay ? Math.abs(tz) : 0;
+    r._jetLagDirection = !r.travelDay || tz===0 ? 'none' : (tz>0 ? 'east' : 'west');
+    // days since tz change
+    let daysSinceTZ = 0;
+    for (let j=i-1;j>=0;j--) { if ((out[j].tzOffset||0) !== tz) break; daysSinceTZ++; if (j===0) break; }
+    r._daysSinceTZChange = r.travelDay ? daysSinceTZ : null;
+    r._travelFatigueFlag = !!(r.travelDay && daysSinceTZ<=2);
+
+    // ---- Exercise ----
+    const min1 = r.activity1Min||0, min2 = r.activity2Min||0;
+    r._totalExerciseMin = min1+min2;
+    r._exerciseDayFlag = r._totalExerciseMin>0;
+    // intensity score: prefer Garmin TL/Z2/Z3/ATE if any present, else type-weighted minutes fallback
+    const garminSignal = [r.activity1TL,r.activity1Z2,r.activity1Z3,r.activity1ATE,r.activity2TL,r.activity2Z2,r.activity2Z3,r.activity2ATE].some(v=>v!=null);
+    const modVigPresent = [r.imMod1,r.imVig1,r.imMod2,r.imVig2].some(v=>v!=null);
+    if (garminSignal) {
+      // Garmin-native signal available: training load is already an intensity-weighted measure.
+      r._exerciseIntensityScore = (r.activity1TL||0)+(r.activity2TL||0) + ((r.activity1Z3||0)+(r.activity2Z3||0))*1.5 + ((r.activity1Z2||0)+(r.activity2Z2||0));
+    } else if (modVigPresent) {
+      // Standard moderate/vigorous minute equivalence (the same 1:2 ratio used in CDC/WHO
+      // activity guidelines) rather than an invented per-activity-type multiplier table.
+      r._exerciseIntensityScore = (r.imMod1||0)*1 + (r.imVig1||0)*2 + (r.imMod2||0)*1 + (r.imVig2||0)*2;
+    } else {
+      // No intensity signal at all: fall back to plain total minutes rather than fabricating
+      // a weighting. This underweights genuinely harder sessions, but doesn't pretend to know
+      // something the data doesn't say.
+      r._exerciseIntensityScore = min1+min2;
+    }
+    const stepsWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x.steps);
+    r._steps7avg = mean(stepsWin(7));
+    r._stepsStdDev7 = stddev(stepsWin(7));
+    const exWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x._totalExerciseMin);
+    r._exerciseStdDev7 = stddev(exWin(7));
+    ['walk/hike','ryan','run','bike'].forEach(type => {
+      const key = '_'+type.replace('/','_')+'7avg';
+      const arr = out.slice(Math.max(0,i-6), i+1).map(x => {
+        let m=0;
+        if (x.activity1===type) m+=x.activity1Min||0;
+        if (x.activity2===type) m+=x.activity2Min||0;
+        return m;
+      });
+      r[key] = mean(arr);
+    });
+
+    // ---- GLP-1 ----
+    let lastDoseIdx = -1, lastDoseMg = null;
+    for (let j=i;j>=0;j--) { if (out[j].glp1Dose) { lastDoseIdx=j; lastDoseMg=out[j].glp1DoseMg; break; } }
+    r._daysSinceLastDose = lastDoseIdx>=0 ? (i-lastDoseIdx) : null;
+    r._glp1Active = r._daysSinceLastDose!=null && r._daysSinceLastDose <= 9;
+    r._expectedPeakWindow = r._daysSinceLastDose!=null && r._daysSinceLastDose>=2 && r._daysSinceLastDose<=4;
+    if (r._daysSinceLastDose==null) r._glp1EffectIntensity = null;
+    else {
+      const curve = {0:2,1:4,2:5,3:5,4:5,5:4,6:3,7:2,8:2};
+      r._glp1EffectIntensity = curve[r._daysSinceLastDose] ?? 1;
+    }
+    r._glp1DoseCohort = lastDoseMg;
+    // days at current dose (consecutive doses at same mg)
+    let daysAtDose = null;
+    if (lastDoseMg!=null) {
+      let cnt=0, cursorIdx=lastDoseIdx;
+      while (cursorIdx>=0 && out[cursorIdx].glp1DoseMg===lastDoseMg) {
+        cnt = i - cursorIdx;
+        // walk back to find prior dose event
+        let prevDoseIdx=-1;
+        for (let j=cursorIdx-1;j>=0;j--){ if (out[j].glp1Dose){ prevDoseIdx=j; break; } }
+        if (prevDoseIdx===-1 || out[prevDoseIdx].glp1DoseMg!==lastDoseMg) break;
+        cursorIdx = prevDoseIdx;
+      }
+      daysAtDose = cnt;
+    }
+    r._daysAtCurrentDose = daysAtDose;
+    r._steadyStateFlag = daysAtDose!=null && daysAtDose>=21;
+    r._timeUntilNextDose = r._daysSinceLastDose!=null ? Math.max(0, 7-r._daysSinceLastDose) : null;
+
+    // ---- date helpers ----
+    r._dayIndex = i+1;
+    r._dayOfWeek = dayOfWeekIdx(r.date);
+    r._isWeekend = isWeekend(r.date);
+    r._month = monthOf(r.date);
+    r._quarter = quarterOf(r.date);
+    r._weekKey = weekStartOf(r.date);
+
+    // ---- waist ----
+    const waistWin = out.slice(Math.max(0,i-29), i+1).map(x=>x.waist);
+    r._waist30avg = mean(waistWin);
+
+    // ---- goals ----
+    r._stepGoalMet = r.steps!=null ? r.steps >= SETTINGS.stepGoal : null;
+    r._proteinGoalMet = r.protein!=null ? r.protein >= SETTINGS.proteinGoal : null;
+  }
+  return out;
+}
+
+function getAllDaysSorted() {
+  const dates = Object.keys(DAYS).sort();
+  return dates.map(d => DAYS[d]);
+}
+function getDerivedAll() {
+  return computeDerivedSeries(getAllDaysSorted());
+}
+function derivedInRange(derived, startStr, endStr) {
+  return derived.filter(r => r.date >= startStr && r.date <= endStr);
+}
+
+/* ---------- Weekly aggregation ---------- */
+function weeklyAggregate(derived) {
+  const weeks = {};
+  derived.forEach(r => {
+    if (!weeks[r._weekKey]) weeks[r._weekKey] = [];
+    weeks[r._weekKey].push(r);
+  });
+  const keys = Object.keys(weeks).sort();
+  return keys.map((k,idx) => {
+    const rows = weeks[k];
+    const weightVals = rows.map(r=>r._weight).filter(v=>v!=null);
+    const prevWeekKey = keys[idx-1];
+    const prevRows = prevWeekKey ? weeks[prevWeekKey] : null;
+    const prevAvgWeight = prevRows ? mean(prevRows.map(r=>r._weight)) : null;
+    const avgWeight = mean(weightVals);
+    return {
+      weekStart: k,
+      n: rows.length,
+      weeklyWeightChange: (avgWeight!=null && prevAvgWeight!=null) ? avgWeight-prevAvgWeight : null,
+      weeklyAvgSteps: mean(rows.map(r=>r.steps)),
+      weeklyTotalExerciseMinutes: rows.reduce((s,r)=>s+(r._totalExerciseMin||0),0),
+      weeklyExerciseIntensityScore: mean(rows.map(r=>r._exerciseIntensityScore)),
+      exerciseDayPct: mean(rows.map(r=>r._exerciseDayFlag?1:0)),
+      avgTotalSleepHours: mean(rows.map(r=>r._totalSleepHrs)),
+      avgSleepEfficiency: mean(rows.map(r=>r._sleepEfficiency)),
+      avgNightAwakenings: mean(rows.map(r=>r.nightAwakenings)),
+      sleepVariance: (function(){ const sd = stddev(rows.map(r=>r._totalSleepHrs)); return sd!=null?sd*sd:null; })(),
+      avgCircadianShiftHours: mean(rows.map(r=>r._circadianShiftHours)),
+      avgJetLagMagnitude: mean(rows.map(r=>r._jetLagMagnitude)),
+      travelDaysThisWeek: rows.filter(r=>r.travelDay).length,
+      hotelNightsThisWeek: rows.filter(r=>r.hotelSleep).length,
+      glp1ActiveDays: rows.filter(r=>r._glp1Active).length,
+      avgDaysSinceDose: mean(rows.map(r=>r._daysSinceLastDose)),
+      avgWeight
+    };
+  });
+}
+
+/* =========================================================
+   UI: navigation, toast
+   ========================================================= */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+const SCREEN_TITLES = {
+  today: ['Logbook', 'Today', ''],
+  dashboard: ['Overview', 'Dashboard', ''],
+  trends: ['Charts', 'Trends', ''],
+  insights: ['Statistics', 'Insights', 'What actually moves the needle'],
+  history: ['Log', 'History', ''],
+  settings: ['Configure', 'Settings', '']
+};
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+  const [eyebrow,title,sub] = SCREEN_TITLES[name];
+  document.getElementById('topEyebrow').textContent = eyebrow;
+  document.getElementById('topTitle').textContent = title;
+  document.getElementById('topSub').textContent = sub;
+  render(name);
+}
+document.querySelectorAll('nav.tabbar button').forEach(b=>{
+  b.addEventListener('click', ()=>switchScreen(b.dataset.screen));
+});
+
+function render(name) {
+  if (name==='today') renderToday();
+  if (name==='dashboard') renderDashboard();
+  if (name==='trends') renderTrends();
+  if (name==='insights') renderInsights();
+  if (name==='history') renderHistory();
+  if (name==='settings') renderSettings();
+}
+
+/* =========================================================
+   TODAY — entry form
+   ========================================================= */
+let currentEntryDate = todayStr();
+
+function fieldNum(id,label,val,opts) {
+  opts = opts||{};
+  return `<label class="field"><span class="flabel">${label}</span>
+    <input type="number" ${opts.step?`step="${opts.step}"`:''} id="${id}" value="${val!=null?val:''}" placeholder="${opts.placeholder||''}"></label>`;
+}
+function fieldText(id,label,val) {
+  return `<label class="field"><span class="flabel">${label}</span><input type="text" id="${id}" value="${val!=null?val:''}"></label>`;
+}
+function fieldTime(id,label,val) {
+  return `<label class="field"><span class="flabel">${label}</span><input type="time" id="${id}" value="${val||''}"></label>`;
+}
+function fieldSelectActivity(id,label,val) {
+  const opts = SETTINGS.activityList.map(a=>`<option value="${a}" ${a===val?'selected':''}>${a}</option>`).join('');
+  return `<label class="field"><span class="flabel">${label}</span>
+    <select id="${id}">
+      <option value="">—</option>
+      ${opts}
+      <option value="__custom__">+ custom…</option>
+    </select></label>`;
+}
+
+function renderToday() {
+  const el = document.getElementById('screen-today');
+  const rec = DAYS[currentEntryDate] || { date: currentEntryDate };
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="stamp">${prettyDate(currentEntryDate)}</div>
+      <div class="row2">
+        <button class="btn-sm" id="prevDayBtn">&larr; Prev day</button>
+        <button class="btn-sm" id="nextDayBtn">Next day &rarr;</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Weight</h2>
+      <div class="row2">
+        ${fieldNum('f_morningWeight','Morning weight (lbs)',rec.morningWeight,{step:'0.1'})}
+        ${fieldNum('f_eveningWeight','Evening weight (lbs, optional)',rec.eveningWeight,{step:'0.1'})}
+      </div>
+      ${fieldNum('f_waist','Waist (in, optional)',rec.waist,{step:'0.1'})}
+    </div>
+
+    <div class="card">
+      <h2>Sleep</h2>
+      <div class="row2">
+        ${fieldTime('f_toBed','To bed (prior night)',rec.toBed)}
+        ${fieldTime('f_wakeUp','Wake up',rec.wakeUp)}
+      </div>
+      <div class="row2">
+        ${fieldNum('f_nightAwakenings','Night awakenings',rec.nightAwakenings)}
+        ${fieldNum('f_timeAwake','Minutes awake overnight',rec.timeAwake)}
+      </div>
+      ${fieldNum('f_sleepQuality','Sleep quality (1&ndash;5)',rec.sleepQuality)}
+      <label class="field"><span class="flabel">Notes</span><textarea id="f_notes">${rec.notes||''}</textarea></label>
+    </div>
+
+    <div class="card">
+      <h2>Travel</h2>
+      <div class="checkline"><input type="checkbox" id="f_travelDay" ${rec.travelDay?'checked':''}><label for="f_travelDay">Travel day</label></div>
+      <div class="row2">
+        ${fieldNum('f_tzOffset','Time zone offset from home (hrs)',rec.tzOffset)}
+        <label class="field"><span class="flabel">Hotel sleep</span>
+          <select id="f_hotelSleep"><option value="">No</option><option value="yes" ${rec.hotelSleep?'selected':''}>Yes</option></select>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Activity</h2>
+      ${fieldNum('f_steps','Steps',rec.steps)}
+      <div class="row2">
+        ${fieldSelectActivity('f_activity1','Activity 1',rec.activity1)}
+        ${fieldNum('f_activity1Min','Minutes',rec.activity1Min)}
+      </div>
+      <div class="row3">
+        ${fieldNum('f_imMod1','Mod min',rec.imMod1)}
+        ${fieldNum('f_imVig1','Vig min',rec.imVig1)}
+        ${fieldNum('f_activity1TL','Training load',rec.activity1TL)}
+      </div>
+      <div class="row3">
+        ${fieldNum('f_activity1Z2','Zone 2 min',rec.activity1Z2)}
+        ${fieldNum('f_activity1Z3','Zone 3+ min',rec.activity1Z3)}
+        ${fieldNum('f_activity1ATE','ATE',rec.activity1ATE,{step:'0.1'})}
+      </div>
+      <hr style="border:none;border-top:1px solid var(--hair);margin:12px 0;">
+      <div class="row2">
+        ${fieldSelectActivity('f_activity2','Activity 2',rec.activity2)}
+        ${fieldNum('f_activity2Min','Minutes',rec.activity2Min)}
+      </div>
+      <div class="row3">
+        ${fieldNum('f_imMod2','Mod min',rec.imMod2)}
+        ${fieldNum('f_imVig2','Vig min',rec.imVig2)}
+        ${fieldNum('f_activity2TL','Training load',rec.activity2TL)}
+      </div>
+      <div class="row3">
+        ${fieldNum('f_activity2Z2','Zone 2 min',rec.activity2Z2)}
+        ${fieldNum('f_activity2Z3','Zone 3+ min',rec.activity2Z3)}
+        ${fieldNum('f_activity2ATE','ATE',rec.activity2ATE,{step:'0.1'})}
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="section-toggle" id="toggleMR">Max rep tests <span class="car">&rsaquo;</span></button>
+      <div class="collapsible" id="mrBody">
+        <div class="row2">
+          ${fieldNum('f_mrPush','Push-ups (1 min)',rec.mrPush)}
+          ${fieldNum('f_mrPullUp','Pull-ups (1 min)',rec.mrPullUp)}
+        </div>
+        <div class="row2">
+          ${fieldNum('f_mrChinUp','Chin-ups (1 min)',rec.mrChinUp)}
+          ${fieldNum('f_mrSquat','Squats (1 min)',rec.mrSquat)}
+        </div>
+        ${fieldNum('f_mrPlank','Plank hold (sec)',rec.mrPlank)}
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="section-toggle" id="toggleNutrition">Nutrition <span class="car">&rsaquo;</span></button>
+      <div class="collapsible" id="nutritionBody">
+        <div class="row2">
+          ${fieldNum('f_calories','Calories',rec.calories)}
+          ${fieldNum('f_protein','Protein (g)',rec.protein)}
+        </div>
+        <div class="row2">
+          ${fieldNum('f_carbs','Carbs (g)',rec.carbs)}
+          ${fieldNum('f_fat','Fat (g)',rec.fat)}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>GLP-1</h2>
+      <div class="checkline"><input type="checkbox" id="f_glp1Dose" ${rec.glp1Dose?'checked':''}><label for="f_glp1Dose">Dose taken today</label></div>
+      <div class="row2">
+        ${fieldNum('f_glp1DoseMg','Dose (mg)',rec.glp1DoseMg,{step:'0.1'})}
+        ${fieldText('f_glp1Drug','Drug',rec.glp1Drug || SETTINGS.glp1DrugDefault)}
+      </div>
+      <div class="row2">
+        ${fieldNum('f_hunger','Hunger/appetite (1&ndash;5)',rec.hunger)}
+        ${fieldNum('f_sideEffects','GLP-1 side effects (1&ndash;5)',rec.sideEffects)}
+      </div>
+    </div>
+
+    <button class="btn" id="saveBtn">Save entry</button>
+  `;
+
+  document.getElementById('prevDayBtn').onclick = () => { currentEntryDate = addDays(currentEntryDate,-1); renderToday(); };
+  document.getElementById('nextDayBtn').onclick = () => { currentEntryDate = addDays(currentEntryDate,1); renderToday(); };
+  document.getElementById('toggleMR').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('mrBody').classList.toggle('open'); };
+  document.getElementById('toggleNutrition').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('nutritionBody').classList.toggle('open'); };
+
+  ['f_activity1','f_activity2'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function(){
+      if (this.value === '__custom__') {
+        const custom = prompt('New activity name:');
+        if (custom) {
+          if (!SETTINGS.activityList.includes(custom)) { SETTINGS.activityList.push(custom); saveSettings(SETTINGS); }
+          renderToday();
+          setTimeout(()=>{ document.getElementById(id).value = custom; },0);
+        } else { this.value=''; }
+      }
+    });
+  });
+
+  document.getElementById('saveBtn').onclick = () => {
+    const g = (id) => { const v = document.getElementById(id).value; return v===''?null:v; };
+    const gn = (id) => { const v = document.getElementById(id).value; return v===''?null:parseFloat(v); };
+    const newRec = {
+      date: currentEntryDate,
+      morningWeight: gn('f_morningWeight'), eveningWeight: gn('f_eveningWeight'), waist: gn('f_waist'),
+      toBed: g('f_toBed'), wakeUp: g('f_wakeUp'), nightAwakenings: gn('f_nightAwakenings'),
+      timeAwake: gn('f_timeAwake'), sleepQuality: gn('f_sleepQuality'), notes: g('f_notes'),
+      travelDay: document.getElementById('f_travelDay').checked,
+      tzOffset: gn('f_tzOffset'), hotelSleep: document.getElementById('f_hotelSleep').value==='yes',
+      steps: gn('f_steps'),
+      activity1: g('f_activity1'), activity1Min: gn('f_activity1Min'), imMod1: gn('f_imMod1'), imVig1: gn('f_imVig1'),
+      activity1TL: gn('f_activity1TL'), activity1Z2: gn('f_activity1Z2'), activity1Z3: gn('f_activity1Z3'), activity1ATE: gn('f_activity1ATE'),
+      activity2: g('f_activity2'), activity2Min: gn('f_activity2Min'), imMod2: gn('f_imMod2'), imVig2: gn('f_imVig2'),
+      activity2TL: gn('f_activity2TL'), activity2Z2: gn('f_activity2Z2'), activity2Z3: gn('f_activity2Z3'), activity2ATE: gn('f_activity2ATE'),
+      mrPush: gn('f_mrPush'), mrPullUp: gn('f_mrPullUp'), mrChinUp: gn('f_mrChinUp'), mrSquat: gn('f_mrSquat'), mrPlank: gn('f_mrPlank'),
+      calories: gn('f_calories'), protein: gn('f_protein'), carbs: gn('f_carbs'), fat: gn('f_fat'),
+      glp1Dose: document.getElementById('f_glp1Dose').checked, glp1DoseMg: gn('f_glp1DoseMg'), glp1Drug: g('f_glp1Drug'),
+      hunger: gn('f_hunger'), sideEffects: gn('f_sideEffects')
+    };
+    DAYS[currentEntryDate] = newRec;
+    saveDays(DAYS);
+    showToast('Saved '+prettyDate(currentEntryDate));
+  };
+}
+
+/* =========================================================
+   Shared helpers for metric cards
+   ========================================================= */
+function metricHTML(label, value, cls) {
+  return `<div class="metric"><span class="label">${label}</span><span class="value ${cls||''} num">${value}</span></div>`;
+}
+function fmt1(v) { return v==null||isNaN(v) ? '—' : v.toFixed(1); }
+function fmt0(v) { return v==null||isNaN(v) ? '—' : Math.round(v).toLocaleString(); }
+function fmtPct(v) { return v==null||isNaN(v) ? '—' : Math.round(v*100)+'%'; }
+function fmtSigned(v,d) { d=d??1; if (v==null||isNaN(v)) return '—'; return (v>0?'+':'')+v.toFixed(d); }
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+let dashboardWindow = SETTINGS.trendWindow; // days
+let nutritionOpen = false;
+
+function renderDashboard() {
+  const el = document.getElementById('screen-dashboard');
+  const derived = getDerivedAll();
+  if (!derived.length) { el.innerHTML = `<div class="card card-empty">No entries yet. Add one on the Today tab.</div>`; return; }
+
+  const endStr = derived[derived.length-1].date;
+  const startStr = addDays(endStr, -(dashboardWindow-1));
+  const windowRows = derivedInRange(derived, startStr, endStr);
+  const latest = derived[derived.length-1];
+
+  // Weight / goal
+  const wtTrend = linreg(windowRows.map((r,idx)=>idx), windowRows.map(r=>r._weight));
+  const trendPerWeek = wtTrend.slope!=null ? wtTrend.slope*7 : null;
+  let eta = null;
+  if (trendPerWeek!=null && trendPerWeek < -0.01 && latest._weight!=null) {
+    const weeksNeeded = (latest._weight - SETTINGS.goalWeight)/(-trendPerWeek);
+    if (weeksNeeded > 0) { const d = toDate(endStr); d.setDate(d.getDate()+Math.round(weeksNeeded*7)); eta = d; }
+  }
+
+  // exercise summary over window
+  const totalExercise = windowRows.reduce((s,r)=>s+(r._totalExerciseMin||0),0);
+  const exerciseDays = windowRows.filter(r=>r._exerciseDayFlag).length;
+  const avgIntensity = mean(windowRows.map(r=>r._exerciseIntensityScore));
+  const walkDays = windowRows.filter(r=>r.activity1==='walk/hike'||r.activity2==='walk/hike').length;
+  const runDays = windowRows.filter(r=>r.activity1==='run'||r.activity2==='run').length;
+  const ryanDays = windowRows.filter(r=>r.activity1==='ryan'||r.activity2==='ryan').length;
+  const bikeDays = windowRows.filter(r=>r.activity1==='bike'||r.activity2==='bike').length;
+
+  // weekly totals / training trends — auto-hide if all zero (Garmin fields unused)
+  const weeklyTLSum = windowRows.reduce((s,r)=>s+(r.activity1TL||0)+(r.activity2TL||0),0);
+  const weeklyZ23Sum = windowRows.reduce((s,r)=>s+(r.activity1Z2||0)+(r.activity1Z3||0)+(r.activity2Z2||0)+(r.activity2Z3||0),0);
+  const weeklyATESum = windowRows.reduce((s,r)=>s+(r.activity1ATE||0)+(r.activity2ATE||0),0);
+  const garminDataPresent = (weeklyTLSum+weeklyZ23Sum+weeklyATESum) > 0;
+  const tlSeries = windowRows.map(r=>(r.activity1TL||0)+(r.activity2TL||0));
+  const z23Series = windowRows.map(r=>(r.activity1Z2||0)+(r.activity1Z3||0)+(r.activity2Z2||0)+(r.activity2Z3||0));
+  const ateSeries = windowRows.map(r=>(r.activity1ATE||0)+(r.activity2ATE||0));
+  const tlTrend = linreg(windowRows.map((r,i)=>i), tlSeries);
+  const z23Trend = linreg(windowRows.map((r,i)=>i), z23Series);
+  const ateTrend = linreg(windowRows.map((r,i)=>i), ateSeries);
+
+  // MR 30-day deviation (latest vs 30-day avg of each)
+  const mrAvg = (key) => mean(derived.slice(-30).map(r=>r[key]));
+  const mrDev = (key) => { const a = mrAvg(key); const rec = [...derived].reverse().find(r=>r[key]!=null); return (rec && a!=null) ? rec[key]-a : null; };
+
+  // nutrition
+  const calDays = windowRows.filter(r=>r.calories!=null).length;
+  const calTrackPct = calDays/windowRows.length;
+  const macroDays = windowRows.filter(r=>r.protein!=null).length;
+  const macroTrackPct = macroDays/windowRows.length;
+
+  // sleep
+  const avgSleep = mean(windowRows.map(r=>r._totalSleepHrs));
+  const avgEff = mean(windowRows.map(r=>r._sleepEfficiency));
+  const avgAwakenings = mean(windowRows.map(r=>r.nightAwakenings));
+  const adequateSleepPct = windowRows.filter(r=>r._totalSleepHrs!=null && r._totalSleepHrs>=7).length / windowRows.filter(r=>r._totalSleepHrs!=null).length;
+  const last7 = derived.slice(-7);
+  const sleep7 = mean(last7.map(r=>r._totalSleepHrs));
+  const eff7 = mean(last7.map(r=>r._sleepEfficiency));
+  const sleepVar = stddev(windowRows.map(r=>r._totalSleepHrs));
+  const weekdaySleep = mean(windowRows.filter(r=>!r._isWeekend).map(r=>r._totalSleepHrs));
+  const weekendSleep = mean(windowRows.filter(r=>r._isWeekend).map(r=>r._totalSleepHrs));
+  const weekendDiff = (weekendSleep!=null && weekdaySleep!=null) ? weekendSleep-weekdaySleep : null;
+
+  // medication panel
+  const daysSinceDose = latest._daysSinceLastDose;
+  const nextDoseIn = latest._timeUntilNextDose;
+  const phase = latest._expectedPeakWindow ? 'Peak window' : (latest._glp1Active ? 'Active, tapering' : 'Inactive');
+
+  el.innerHTML = `
+    <div class="date-range-bar">
+      ${[7,28,90].map(w=>`<button class="btn-sm ${dashboardWindow===w?'active':''}" data-w="${w}">${w}d</button>`).join('')}
+      <button class="btn-sm ${dashboardWindow==='all'?'active':''}" data-w="all">All</button>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>&#9878; Weight</h2>
+        ${metricHTML('Starting', fmt1(SETTINGS.startWeight)+' lbs')}
+        ${metricHTML('Current', fmt1(latest._weight)+' lbs')}
+        ${metricHTML('Total change', fmtSigned(latest._totalLoss!=null?-latest._totalLoss:null)+' lbs', latest._totalLoss>0?'good':'')}
+        ${metricHTML('Window', dashboardWindow==='all'?'All time':dashboardWindow+' days')}
+      </div>
+      <div class="card">
+        <h2>&#127919; Goal progress</h2>
+        ${metricHTML('Goal weight', fmt1(SETTINGS.goalWeight)+' lbs')}
+        ${metricHTML('Remaining', fmt1(latest._weight-SETTINGS.goalWeight)+' lbs')}
+        ${metricHTML('Trend/week', fmtSigned(trendPerWeek,2)+' lbs', trendPerWeek<0?'good':'warn')}
+        ${metricHTML('ETA (trend)', eta ? eta.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—')}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>&#127939; Exercise summary</h2>
+        ${metricHTML('Total (min)', fmt0(totalExercise))}
+        ${metricHTML('Avg/day (min)', fmt1(totalExercise/windowRows.length))}
+        ${metricHTML('Exercise days', fmtPct(exerciseDays/windowRows.length))}
+        ${metricHTML('Intensity avg', fmt1(avgIntensity))}
+      </div>
+      <div class="card">
+        <h2>&#128202; Activities</h2>
+        ${metricHTML('Walk/hike days', walkDays)}
+        ${metricHTML('Run days', runDays)}
+        ${metricHTML('Ryan days', ryanDays)}
+        ${metricHTML('Bike days', bikeDays)}
+      </div>
+    </div>
+
+    ${garminDataPresent ? `
+    <div class="grid2">
+      <div class="card">
+        <h2>&#128200; Weekly totals</h2>
+        ${metricHTML('Training load', fmt0(weeklyTLSum))}
+        ${metricHTML('Zone 2+3 (min)', fmt0(weeklyZ23Sum))}
+        ${metricHTML('ATE total', fmt1(weeklyATESum))}
+      </div>
+      <div class="card">
+        <h2>&#128201; Training trends</h2>
+        ${metricHTML('TL trend/wk', tlTrend.slope!=null ? fmtSigned(tlTrend.slope*7,1) : '—')}
+        ${metricHTML('Z23 trend/wk (min)', z23Trend.slope!=null ? fmtSigned(z23Trend.slope*7,1) : '—')}
+        ${metricHTML('ATE trend/wk', ateTrend.slope!=null ? fmtSigned(ateTrend.slope*7,2) : '—')}
+      </div>
+    </div>` : ''}
+
+    <div class="card">
+      <h2>&#128170; Max-rep 30-day deviation</h2>
+      <div class="grid2">
+        ${metricHTML('Push-ups', fmtSigned(mrDev('mrPush'),1))}
+        ${metricHTML('Pull-ups', fmtSigned(mrDev('mrPullUp'),1))}
+        ${metricHTML('Chin-ups', fmtSigned(mrDev('mrChinUp'),1))}
+        ${metricHTML('Squats', fmtSigned(mrDev('mrSquat'),1))}
+      </div>
+      ${metricHTML('Plank (sec)', fmtSigned(mrDev('mrPlank'),0))}
+    </div>
+
+    <div class="card">
+      <h2>&#128137; Medication</h2>
+      ${metricHTML('Days since last dose', daysSinceDose!=null?daysSinceDose:'—')}
+      ${metricHTML('Phase', phase, latest._expectedPeakWindow?'good':'')}
+      ${metricHTML('Next dose due', nextDoseIn!=null ? (nextDoseIn===0?'Today':'in '+nextDoseIn+'d') : '—')}
+      ${metricHTML('Current dose', latest._glp1DoseCohort!=null ? latest._glp1DoseCohort+' mg' : '—')}
+    </div>
+
+    <div class="card">
+      <button class="section-toggle ${nutritionOpen?'open':''}" id="toggleNutritionDash">Nutrition <span class="car">&rsaquo;</span></button>
+      <div class="collapsible ${nutritionOpen?'open':''}" id="nutritionDashBody">
+        <div class="grid2">
+          ${metricHTML('Avg calories', calDays?fmt0(mean(windowRows.map(r=>r.calories))):'not tracked')}
+          ${metricHTML('Cal tracking %', fmtPct(calTrackPct))}
+          ${metricHTML('Avg protein (g)', macroDays?fmt0(mean(windowRows.map(r=>r.protein))):'not tracked')}
+          ${metricHTML('Macro tracking %', fmtPct(macroTrackPct))}
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>&#128564; Sleep summary</h2>
+        ${metricHTML('Avg total sleep (hrs)', fmt1(avgSleep))}
+        ${metricHTML('Avg efficiency (%)', fmt1(avgEff))}
+        ${metricHTML('Avg awakenings', fmt1(avgAwakenings))}
+        ${metricHTML('Adequate sleep %', fmtPct(adequateSleepPct))}
+      </div>
+      <div class="card">
+        <h2>&#11088; Sleep quality</h2>
+        ${metricHTML('7-day avg (hrs)', fmt1(sleep7))}
+        ${metricHTML('7-day efficiency', fmt1(eff7))}
+        ${metricHTML('Sleep variance', fmt1(sleepVar))}
+        ${metricHTML('Weekend&ndash;weekday diff', fmtSigned(weekendDiff,2))}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>&#127919; Daily goals &amp; measurements</h2>
+      <div class="grid2">
+        ${metricHTML('Step goal', SETTINGS.stepGoal.toLocaleString())}
+        ${metricHTML('Protein goal (g)', SETTINGS.proteinGoal)}
+        ${metricHTML('Waist 30-day avg', fmt1(latest._waist30avg)+(latest._waist30avg!=null?' in':''))}
+        ${metricHTML('Today steps vs goal', latest.steps!=null ? (latest._stepGoalMet?'Met':'Under') : '—', latest._stepGoalMet?'good':'')}
+      </div>
+    </div>
+  `;
+
+  el.querySelectorAll('[data-w]').forEach(btn=>{
+    btn.onclick = () => {
+      const w = btn.dataset.w;
+      dashboardWindow = w==='all' ? derived.length : parseInt(w,10);
+      renderDashboard();
+    };
+  });
+  const nt = document.getElementById('toggleNutritionDash');
+  if (nt) nt.onclick = () => { nutritionOpen = !nutritionOpen; renderDashboard(); };
+}
+
+/* =========================================================
+   Chart helpers (inline SVG, no dependencies)
+   ========================================================= */
+function lineChart(series, opts) {
+  opts = opts || {};
+  const w = 320, h = 140, pad = 24;
+  const vals = series.map(p=>p.y).filter(v=>v!=null);
+  if (!vals.length) return `<div class="card-empty">Not enough data yet.</div>`;
+  const minY = opts.minY!=null ? opts.minY : Math.min(...vals);
+  const maxY = opts.maxY!=null ? opts.maxY : Math.max(...vals);
+  const rangeY = (maxY-minY)||1;
+  const n = series.length;
+  const x = (i) => pad + (i/(Math.max(n-1,1)))*(w-2*pad);
+  const y = (v) => h-pad - ((v-minY)/rangeY)*(h-2*pad);
+  let path = '';
+  let started = false;
+  series.forEach((p,i)=>{
+    if (p.y==null) { started=false; return; }
+    path += (started?'L':'M') + x(i).toFixed(1) + ',' + y(p.y).toFixed(1) + ' ';
+    started = true;
+  });
+  const avgLine = opts.showAvgLine && vals.length ? mean(vals) : null;
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--hair)" stroke-width="1"/>
+    ${avgLine!=null ? `<line x1="${pad}" y1="${y(avgLine).toFixed(1)}" x2="${w-pad}" y2="${y(avgLine).toFixed(1)}" stroke="var(--hair)" stroke-dasharray="3,3" stroke-width="1"/>` : ''}
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function scatterChart(xs, ys, reg) {
+  const w = 300, h = 180, pad = 26;
+  const pts = [];
+  for (let i=0;i<xs.length;i++) if (xs[i]!=null && ys[i]!=null) pts.push([xs[i],ys[i]]);
+  if (pts.length < 3) return `<div class="card-empty">Not enough paired data.</div>`;
+  const xsA = pts.map(p=>p[0]), ysA = pts.map(p=>p[1]);
+  const minX=Math.min(...xsA), maxX=Math.max(...xsA), minY=Math.min(...ysA), maxY=Math.max(...ysA);
+  const rx = (maxX-minX)||1, ry=(maxY-minY)||1;
+  const px = (v)=>pad+((v-minX)/rx)*(w-2*pad);
+  const py = (v)=>h-pad-((v-minY)/ry)*(h-2*pad);
+  const dots = pts.map(p=>`<circle cx="${px(p[0]).toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="var(--accent)" opacity="0.65"/>`).join('');
+  let fitLine = '';
+  if (reg && reg.slope!=null) {
+    const y1 = reg.intercept+reg.slope*minX, y2 = reg.intercept+reg.slope*maxX;
+    fitLine = `<line x1="${px(minX).toFixed(1)}" y1="${py(y1).toFixed(1)}" x2="${px(maxX).toFixed(1)}" y2="${py(y2).toFixed(1)}" stroke="var(--rust)" stroke-width="2"/>`;
+  }
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--hair)"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="var(--hair)"/>
+    ${dots}${fitLine}
+  </svg>`;
+}
+
+/* =========================================================
+   TRENDS
+   ========================================================= */
+function renderTrends() {
+  const el = document.getElementById('screen-trends');
+  const derived = getDerivedAll();
+  if (!derived.length) { el.innerHTML = `<div class="card card-empty">No entries yet.</div>`; return; }
+  const last60 = derived.slice(-60);
+
+  const weightSeries = last60.map(r=>({y:r._weight}));
+  const weight7Series = last60.map(r=>({y:r._weight7avg}));
+  const sleepSeries = last60.map(r=>({y:r._totalSleepHrs}));
+  const exSeries = last60.map(r=>({y:r._totalExerciseMin}));
+  const stepsSeries = last60.map(r=>({y:r.steps}));
+  const circSeries = last60.map(r=>({y:r._circadianShiftHours}));
+
+  const stepsVar = stddev(last60.map(r=>r.steps));
+  const exVar = stddev(last60.map(r=>r._totalExerciseMin));
+  const consistencyScore = (stepsVar!=null) ? Math.max(0, 100-(stepsVar/100)) : null;
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Weight (last 60 days)</h2>
+      ${lineChart(weight7Series)}
+      <div class="chart-caption">7-day rolling average, ${last60[0].date} &ndash; ${last60[last60.length-1].date}</div>
+    </div>
+    <div class="card">
+      <h2>Sleep hours</h2>
+      ${lineChart(sleepSeries,{showAvgLine:true})}
+    </div>
+    <div class="card">
+      <h2>Exercise minutes/day</h2>
+      ${lineChart(exSeries,{showAvgLine:true})}
+    </div>
+    <div class="card">
+      <h2>Steps/day</h2>
+      ${lineChart(stepsSeries,{showAvgLine:true})}
+    </div>
+    <div class="card">
+      <h2>Circadian shift (hrs from usual)</h2>
+      ${lineChart(circSeries)}
+    </div>
+    <div class="card">
+      <h2>&#128202; Consistency (moved from Dashboard)</h2>
+      ${metricHTML('Steps variance', fmt1(stepsVar))}
+      ${metricHTML('Exercise variance', fmt1(exVar))}
+      ${metricHTML('Consistency score', consistencyScore!=null?fmt0(consistencyScore):'—')}
+      <div class="confidence-note">Higher consistency score = more even day-to-day activity, less boom/bust.</div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   INSIGHTS — regressions, plain language, confidence-flagged
+   ========================================================= */
+const DAILY_PREDICTORS = [
+  { key: 'steps', label: 'Steps' },
+  { key: '_totalExerciseMin', label: 'Total exercise minutes' },
+  { key: '_exerciseIntensityScore', label: 'Exercise intensity score' },
+  { key: '_exerciseDayFlagNum', label: 'Exercise day (yes/no)' },
+  { key: '_totalSleepHrs', label: 'Total sleep hours' },
+  { key: '_sleepEfficiency', label: 'Sleep efficiency' },
+  { key: 'nightAwakenings', label: 'Night awakenings' },
+  { key: '_sleepFragIndex', label: 'Sleep fragmentation index' },
+  { key: '_circadianShiftHours', label: 'Circadian shift (hrs)' },
+  { key: '_jetLagMagnitude', label: 'Jet lag magnitude' },
+];
+const WEEKLY_PREDICTORS = [
+  { key: 'weeklyAvgSteps', label: 'Weekly avg steps' },
+  { key: 'weeklyTotalExerciseMinutes', label: 'Weekly total exercise minutes' },
+  { key: 'weeklyExerciseIntensityScore', label: 'Weekly exercise intensity' },
+  { key: 'exerciseDayPct', label: 'Exercise day %' },
+  { key: 'avgTotalSleepHours', label: 'Avg total sleep hours' },
+  { key: 'avgSleepEfficiency', label: 'Avg sleep efficiency' },
+  { key: 'avgNightAwakenings', label: 'Avg night awakenings' },
+  { key: 'sleepVariance', label: 'Sleep variance' },
+  { key: 'avgCircadianShiftHours', label: 'Avg circadian shift' },
+  { key: 'avgJetLagMagnitude', label: 'Avg jet lag magnitude' },
+  { key: 'travelDaysThisWeek', label: 'Travel days this week' },
+  { key: 'hotelNightsThisWeek', label: 'Hotel nights this week' },
+  { key: 'glp1ActiveDays', label: 'GLP-1 active days' },
+  { key: 'avgDaysSinceDose', label: 'Avg days since dose' },
+];
+
+function confidenceTag(reg, minN) {
+  if (reg.n < minN) return { text: 'Low N ('+reg.n+')', cls: '' };
+  if (reg.tstat!=null && Math.abs(reg.tstat) >= 2) return { text: 'Significant', cls: 'sig' };
+  return { text: 'Not significant', cls: '' };
+}
+
+function plainSentence(label, reg, targetLabel) {
+  if (reg.slope==null) return `${label}: not enough overlapping data yet.`;
+  const dir = reg.slope < 0 ? 'lower' : 'higher';
+  const r2pct = Math.round((reg.r2||0)*100);
+  return `Higher ${label.toLowerCase()} is associated with ${dir} ${targetLabel} (R&sup2;=${r2pct}%, n=${reg.n}).`;
+}
+
+function renderInsights() {
+  const el = document.getElementById('screen-insights');
+  const derived = getDerivedAll();
+  if (derived.length < 5) { el.innerHTML = `<div class="card card-empty">Need at least a few days of data for statistics to mean anything.</div>`; return; }
+
+  derived.forEach(r => { r._exerciseDayFlagNum = r._exerciseDayFlag ? 1 : 0; });
+  const target = derived.map(r=>r._weight7avgChange);
+
+  const dailyResults = DAILY_PREDICTORS.map(p => {
+    const xs = derived.map(r=>r[p.key]);
+    const reg = linreg(xs, target);
+    return Object.assign({}, p, reg);
+  }).filter(r => r.n >= 3).sort((a,b) => (b.r2||0)-(a.r2||0));
+
+  const weekly = weeklyAggregate(derived);
+  const wTarget = weekly.map(w=>w.weeklyWeightChange);
+  const weeklyResults = WEEKLY_PREDICTORS.map(p => {
+    const xs = weekly.map(w=>w[p.key]);
+    const reg = linreg(xs, wTarget);
+    return Object.assign({}, p, reg);
+  }).filter(r => r.n >= 3).sort((a,b) => (b.r2||0)-(a.r2||0));
+
+  // GLP-1 effectiveness models
+  const glp1Models = [
+    { label: 'Effect intensity &rarr; weight change', xs: derived.map(r=>r._glp1EffectIntensity), ys: target, targetLabel: 'weight change' },
+    { label: 'Days since dose &rarr; weight change', xs: derived.map(r=>r._daysSinceLastDose), ys: target, targetLabel: 'weight change' },
+    { label: 'Days at current dose &rarr; total loss', xs: derived.map(r=>r._daysAtCurrentDose), ys: derived.map(r=>r._totalLoss), targetLabel: 'total weight lost' },
+    { label: 'Last dose amount &rarr; weight change', xs: derived.map(r=>r._glp1DoseCohort), ys: target, targetLabel: 'weight change' },
+  ].map(m => Object.assign({}, m, linreg(m.xs, m.ys)));
+
+  const top3Daily = dailyResults.slice(0,3);
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Strongest daily relationships</h2>
+      ${top3Daily.length ? top3Daily.map(r => {
+        const tag = confidenceTag(r, 10);
+        return `<div class="insight-sentence">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>${r.label}</strong><span class="tag ${tag.cls}">${tag.text}</span>
+          </div>
+          ${plainSentence(r.label, r, "weight change")}
+          ${scatterChart(derived.map(x=>x[r.key]), target, r)}
+        </div>`;
+      }).join('') : `<div class="card-empty">Not enough data yet.</div>`}
+    </div>
+
+    <div class="card">
+      <h2>All daily predictors vs. weight change</h2>
+      ${dailyResults.map(r=>{
+        const tag = confidenceTag(r,10);
+        return `<div class="corr-row">
+          <span class="corr-label">${r.label}</span>
+          <span class="tag ${tag.cls}">${tag.text}</span>
+          <span class="corr-strength">R&sup2; ${Math.round((r.r2||0)*100)}%</span>
+        </div>`;
+      }).join('')}
+      <div class="confidence-note">Dropped from the original model: Strength Minutes and Mobility Minutes never existed as tracked columns, so they've been removed rather than shown as permanently empty rows.</div>
+    </div>
+
+    <div class="card">
+      <h2>Weekly predictors vs. weekly weight change</h2>
+      ${weeklyResults.length ? weeklyResults.map(r=>{
+        const tag = confidenceTag(r,6);
+        return `<div class="corr-row">
+          <span class="corr-label">${r.label}</span>
+          <span class="tag ${tag.cls}">${tag.text}</span>
+          <span class="corr-strength">R&sup2; ${Math.round((r.r2||0)*100)}%</span>
+        </div>`;
+      }).join('') : `<div class="card-empty">Not enough weeks yet.</div>`}
+      <div class="confidence-note">Showing simple (single-predictor) regressions only. The original 5-variable weekly multiple regression needed far more weeks of data than were available (it was running on ~5 weeks) to produce stable, trustworthy coefficients &mdash; simple regressions need less data per relationship and are less prone to that overfitting.</div>
+    </div>
+
+    <div class="card">
+      <h2>&#128137; GLP-1 effectiveness models</h2>
+      ${glp1Models.map(m => {
+        if (m.slope==null) return `<div class="insight-sentence">${m.label}: not enough data.</div>`;
+        const tag = confidenceTag(m, 10);
+        return `<div class="insight-sentence">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>${m.label.replace('&rarr;','→')}</strong><span class="tag ${tag.cls}">${tag.text}</span>
+          </div>
+          Slope ${m.slope.toFixed(3)}, R&sup2;=${Math.round((m.r2||0)*100)}%, n=${m.n}.
+          ${tag.cls!=='sig' ? '<div class="confidence-note">Weak/inconclusive relationship with current data &mdash; treat as a hypothesis, not a finding.</div>' : ''}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* =========================================================
+   HISTORY
+   ========================================================= */
+function renderHistory() {
+  const el = document.getElementById('screen-history');
+  const derived = getDerivedAll().slice().reverse();
+  if (!derived.length) { el.innerHTML = `<div class="card card-empty">No entries yet.</div>`; return; }
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>All entries (${derived.length})</h2>
+      ${derived.map(r => `
+        <div class="hist-row" data-date="${r.date}">
+          <div>
+            <div class="d">${prettyDate(r.date)}</div>
+            <div class="tags">${r._exerciseDayFlag?'exercise &middot; ':''}${r.travelDay?'travel &middot; ':''}${r.glp1Dose?'dose':''}</div>
+          </div>
+          <div class="w">${fmt1(r._weight)} lbs</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  el.querySelectorAll('.hist-row').forEach(row => {
+    row.style.cursor = 'pointer';
+    row.onclick = () => { currentEntryDate = row.dataset.date; switchScreen('today'); };
+  });
+}
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+function renderSettings() {
+  const el = document.getElementById('screen-settings');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Goals</h2>
+      ${fieldNum('s_goalWeight','Goal weight (lbs)',SETTINGS.goalWeight,{step:'0.1'})}
+      ${fieldNum('s_startWeight','Starting weight (lbs)',SETTINGS.startWeight,{step:'0.1'})}
+      ${fieldNum('s_stepGoal','Step goal',SETTINGS.stepGoal)}
+      ${fieldNum('s_proteinGoal','Protein goal (g)',SETTINGS.proteinGoal)}
+    </div>
+    <div class="card">
+      <h2>Preferences</h2>
+      <label class="field"><span class="flabel">Week starts on</span>
+        <select id="s_weekStart">
+          <option value="monday" ${SETTINGS.weekStart==='monday'?'selected':''}>Monday</option>
+          <option value="sunday" ${SETTINGS.weekStart==='sunday'?'selected':''}>Sunday</option>
+        </select>
+      </label>
+      ${fieldText('s_glp1Drug','Default GLP-1 drug',SETTINGS.glp1DrugDefault)}
+    </div>
+    <div class="card">
+      <h2>Activity list</h2>
+      <div class="pill-row">${SETTINGS.activityList.map(a=>`<span class="tag">${a}</span>`).join('')}</div>
+      <div class="row2">
+        <input type="text" id="newActivityInput" placeholder="Add activity…">
+        <button class="btn secondary btn-sm" id="addActivityBtn">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Data</h2>
+      <button class="btn secondary" id="exportBtn" style="margin-bottom:10px;">Export all data (JSON)</button>
+      <button class="btn secondary" id="importBtn" style="margin-bottom:10px;">Import data (JSON)</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <div class="confidence-note">Export regularly &mdash; this app stores everything only on this device, with no cloud backup.</div>
+    </div>
+    <div class="card">
+      <h2>About</h2>
+      <div class="confidence-note">Logbook &middot; ${Object.keys(DAYS).length} days tracked &middot; runs entirely offline, all data stays on this device.</div>
+    </div>
+    <button class="btn" id="saveSettingsBtn">Save settings</button>
+  `;
+
+  document.getElementById('addActivityBtn').onclick = () => {
+    const v = document.getElementById('newActivityInput').value.trim();
+    if (v && !SETTINGS.activityList.includes(v)) {
+      SETTINGS.activityList.push(v); saveSettings(SETTINGS); renderSettings(); showToast('Added '+v);
+    }
+  };
+
+  document.getElementById('exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify({ settings: SETTINGS, days: DAYS }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'logbook-export-'+todayStr()+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+  document.getElementById('importFile').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (data.days) { DAYS = data.days; saveDays(DAYS); }
+        if (data.settings) { SETTINGS = Object.assign({}, SETTINGS, data.settings); saveSettings(SETTINGS); }
+        showToast('Import complete');
+        renderSettings();
+      } catch (err) { showToast('Import failed: invalid file'); }
+    };
+    reader.readAsText(file);
+  };
+
+  document.getElementById('saveSettingsBtn').onclick = () => {
+    SETTINGS.goalWeight = parseFloat(document.getElementById('s_goalWeight').value)||SETTINGS.goalWeight;
+    SETTINGS.startWeight = parseFloat(document.getElementById('s_startWeight').value)||SETTINGS.startWeight;
+    SETTINGS.stepGoal = parseFloat(document.getElementById('s_stepGoal').value)||SETTINGS.stepGoal;
+    SETTINGS.proteinGoal = parseFloat(document.getElementById('s_proteinGoal').value)||SETTINGS.proteinGoal;
+    SETTINGS.weekStart = document.getElementById('s_weekStart').value;
+    SETTINGS.glp1DrugDefault = document.getElementById('s_glp1Drug').value;
+    saveSettings(SETTINGS);
+    showToast('Settings saved');
+  };
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+switchScreen('today');
+
+</script>
+</body>
+</html>
