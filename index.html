@@ -619,13 +619,15 @@ function renderToday() {
     </div>
 
     <div class="card">
-      <h2>Travel</h2>
-      <div class="checkline"><input type="checkbox" id="f_travelDay" ${rec.travelDay?'checked':''}><label for="f_travelDay">Travel day</label></div>
-      <div class="row2">
-        ${fieldNum('f_tzOffset','Time zone offset from home (hrs)',rec.tzOffset)}
-        <label class="field"><span class="flabel">Hotel sleep</span>
-          <select id="f_hotelSleep"><option value="">No</option><option value="yes" ${rec.hotelSleep?'selected':''}>Yes</option></select>
-        </label>
+      <button class="section-toggle" id="toggleTravel">Travel <span class="car">&rsaquo;</span></button>
+      <div class="collapsible" id="travelBody">
+        <div class="checkline"><input type="checkbox" id="f_travelDay" ${rec.travelDay?'checked':''}><label for="f_travelDay">Travel day</label></div>
+        <div class="row2">
+          ${fieldNum('f_tzOffset','Time zone offset from home (hrs)',rec.tzOffset)}
+          <label class="field"><span class="flabel">Hotel sleep</span>
+            <select id="f_hotelSleep"><option value="">No</option><option value="yes" ${rec.hotelSleep?'selected':''}>Yes</option></select>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -693,15 +695,17 @@ function renderToday() {
     </div>
 
     <div class="card">
-      <h2>GLP-1</h2>
-      <div class="checkline"><input type="checkbox" id="f_glp1Dose" ${rec.glp1Dose?'checked':''}><label for="f_glp1Dose">Dose taken today</label></div>
-      <div class="row2">
-        ${fieldNum('f_glp1DoseMg','Dose (mg)',rec.glp1DoseMg,{step:'0.1'})}
-        ${fieldText('f_glp1Drug','Drug',rec.glp1Drug || SETTINGS.glp1DrugDefault)}
-      </div>
-      <div class="row2">
-        ${fieldNum('f_hunger','Hunger/appetite (1&ndash;5)',rec.hunger)}
-        ${fieldNum('f_sideEffects','GLP-1 side effects (1&ndash;5)',rec.sideEffects)}
+      <button class="section-toggle" id="toggleGlp1">GLP-1 <span class="car">&rsaquo;</span></button>
+      <div class="collapsible" id="glp1Body">
+        <div class="checkline"><input type="checkbox" id="f_glp1Dose" ${rec.glp1Dose?'checked':''}><label for="f_glp1Dose">Dose taken today</label></div>
+        <div class="row2">
+          ${fieldNum('f_glp1DoseMg','Dose (mg)',rec.glp1DoseMg,{step:'0.1'})}
+          ${fieldText('f_glp1Drug','Drug',rec.glp1Drug || SETTINGS.glp1DrugDefault)}
+        </div>
+        <div class="row2">
+          ${fieldNum('f_hunger','Hunger/appetite (1&ndash;5)',rec.hunger)}
+          ${fieldNum('f_sideEffects','GLP-1 side effects (1&ndash;5)',rec.sideEffects)}
+        </div>
       </div>
     </div>
 
@@ -712,6 +716,8 @@ function renderToday() {
   document.getElementById('nextDayBtn').onclick = () => { currentEntryDate = addDays(currentEntryDate,1); renderToday(); };
   document.getElementById('toggleMR').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('mrBody').classList.toggle('open'); };
   document.getElementById('toggleNutrition').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('nutritionBody').classList.toggle('open'); };
+  document.getElementById('toggleTravel').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('travelBody').classList.toggle('open'); };
+  document.getElementById('toggleGlp1').onclick = (e) => { e.target.closest('button').classList.toggle('open'); document.getElementById('glp1Body').classList.toggle('open'); };
 
   ['f_activity1','f_activity2'].forEach(id => {
     document.getElementById(id).addEventListener('change', function(){
