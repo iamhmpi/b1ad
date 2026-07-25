@@ -793,6 +793,9 @@ function renderDashboard() {
   // Weight / goal
   const wtTrend = linreg(windowRows.map((r,idx)=>idx), windowRows.map(r=>r._weight));
   const trendPerWeek = wtTrend.slope!=null ? wtTrend.slope*7 : null;
+  const windowStartRec = windowRows.find(r=>r._weight!=null);
+  const windowStartWeight = windowStartRec ? windowStartRec._weight : null;
+  const windowChange = (windowStartWeight!=null && latest._weight!=null) ? latest._weight - windowStartWeight : null;
   let eta = null;
   if (trendPerWeek!=null && trendPerWeek < -0.01 && latest._weight!=null) {
     const weeksNeeded = (latest._weight - SETTINGS.goalWeight)/(-trendPerWeek);
@@ -857,15 +860,16 @@ function renderDashboard() {
     <div class="grid2">
       <div class="card">
         <h2>&#9878; Weight</h2>
-        ${metricHTML('Starting', fmt1(SETTINGS.startWeight)+' lbs')}
+        ${metricHTML('Starting', windowStartWeight!=null ? fmt1(windowStartWeight)+' lbs' : '—')}
         ${metricHTML('Current', fmt1(latest._weight)+' lbs')}
-        ${metricHTML('Total change', fmtSigned(latest._totalLoss!=null?-latest._totalLoss:null)+' lbs', latest._totalLoss>0?'good':'')}
+        ${metricHTML('Change (window)', fmtSigned(windowChange)+' lbs', windowChange<0?'good':(windowChange>0?'warn':''))}
         ${metricHTML('Window', dashboardWindow==='all'?'All time':dashboardWindow+' days')}
       </div>
       <div class="card">
         <h2>&#127919; Goal progress</h2>
         ${metricHTML('Goal weight', fmt1(SETTINGS.goalWeight)+' lbs')}
         ${metricHTML('Remaining', fmt1(latest._weight-SETTINGS.goalWeight)+' lbs')}
+        ${metricHTML('Total loss to date', fmtSigned(latest._totalLoss!=null?-latest._totalLoss:null)+' lbs', latest._totalLoss>0?'good':'')}
         ${metricHTML('Trend/week', fmtSigned(trendPerWeek,2)+' lbs', trendPerWeek<0?'good':'warn')}
         ${metricHTML('ETA (trend)', eta ? eta.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—')}
       </div>
