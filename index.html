@@ -335,6 +335,7 @@ function computeDerivedSeries(rawDays) {
     const win = (k) => weight.slice(Math.max(0,i-k+1), i+1);
     r._weight7avg = mean(win(7));
     r._weight30avg = mean(win(30));
+    r._weight28avg = mean(win(28));
     r._weightDeviation7 = (r._weight!=null && r._weight7avg!=null) ? r._weight - r._weight7avg : null;
     r._dailyWeightChange = (i>0 && weight[i]!=null && weight[i-1]!=null) ? weight[i]-weight[i-1] : null;
     r._totalLoss = (r._weight!=null) ? SETTINGS.startWeight - r._weight : null;
@@ -359,6 +360,7 @@ function computeDerivedSeries(rawDays) {
 
     const sleepWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x._totalSleepHrs);
     r._sleep7avg = mean(sleepWin(7));
+    r._sleep28avg = mean(sleepWin(28));
     r._sleepStdDev7 = stddev(sleepWin(7));
 
     // ---- Circadian / travel ----
@@ -402,8 +404,11 @@ function computeDerivedSeries(rawDays) {
     }
     const stepsWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x.steps);
     r._steps7avg = mean(stepsWin(7));
+    r._steps28avg = mean(stepsWin(28));
     r._stepsStdDev7 = stddev(stepsWin(7));
     const exWin = (k) => out.slice(Math.max(0,i-k+1), i+1).map(x=>x._totalExerciseMin);
+    r._exercise7avg = mean(exWin(7));
+    r._exercise28avg = mean(exWin(28));
     r._exerciseStdDev7 = stddev(exWin(7));
     ['walk/hike','ryan','run','bike'].forEach(type => {
       const key = '_'+type.replace('/','_')+'7avg';
@@ -972,29 +977,99 @@ function renderDashboard() {
 /* =========================================================
    Chart helpers (inline SVG, no dependencies)
    ========================================================= */
-function lineChart(series, opts) {
+// "Nice" axis tick calculation (rounds to 1/2/5/10 * 10^n rather than raw min/max)
+function niceNum(range, round) {
+  if (range === 0) return 1;
+  const exponent = Math.floor(Math.log10(range));
+  const fraction = range / Math.pow(10, exponent);
+  let niceFraction;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else {
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+    else niceFraction = 10;
+  }
+  return niceFraction * Math.pow(10, exponent);
+}
+function niceTicks(minV, maxV, tickCount) {
+  tickCount = tickCount || 4;
+  if (minV === maxV) { minV -= 1; maxV += 1; }
+  const range = niceNum(maxV - minV, false);
+  const step = niceNum(range / (tickCount - 1), true);
+  const niceMin = Math.floor(minV / step) * step;
+  const niceMax = Math.ceil(maxV / step) * step;
+  const ticks = [];
+  for (let v = niceMin; v <= niceMax + step*1e-6; v += step) ticks.push(Math.round(v*1000)/1000);
+  return { ticks, min: niceMin, max: niceMax };
+}
+function shortDate(dstr) {
+  const d = toDate(dstr);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// dates: array of date strings, aligned index-for-index with each series' values[]
+// chartSeries: [{ label, color, values, mode:'line'|'dots', width, dashed }]
+function multiChart(dates, chartSeries, opts) {
   opts = opts || {};
-  const w = 320, h = 140, pad = 24;
-  const vals = series.map(p=>p.y).filter(v=>v!=null);
-  if (!vals.length) return `<div class="card-empty">Not enough data yet.</div>`;
-  const minY = opts.minY!=null ? opts.minY : Math.min(...vals);
-  const maxY = opts.maxY!=null ? opts.maxY : Math.max(...vals);
-  const rangeY = (maxY-minY)||1;
-  const n = series.length;
-  const x = (i) => pad + (i/(Math.max(n-1,1)))*(w-2*pad);
-  const y = (v) => h-pad - ((v-minY)/rangeY)*(h-2*pad);
-  let path = '';
-  let started = false;
-  series.forEach((p,i)=>{
-    if (p.y==null) { started=false; return; }
-    path += (started?'L':'M') + x(i).toFixed(1) + ',' + y(p.y).toFixed(1) + ' ';
-    started = true;
-  });
-  const avgLine = opts.showAvgLine && vals.length ? mean(vals) : null;
-  return `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--hair)" stroke-width="1"/>
-    ${avgLine!=null ? `<line x1="${pad}" y1="${y(avgLine).toFixed(1)}" x2="${w-pad}" y2="${y(avgLine).toFixed(1)}" stroke="var(--hair)" stroke-dasharray="3,3" stroke-width="1"/>` : ''}
-    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  const w = 320, h = 170, padL = 40, padR = 10, padT = 10, padB = 22;
+  const allVals = chartSeries.flatMap(s => s.values).filter(v => v != null && !isNaN(v));
+  if (!allVals.length) return `<div class="card-empty">Not enough data yet.</div>`;
+  const dataMin = Math.min(...allVals), dataMax = Math.max(...allVals);
+  const span = (dataMax - dataMin) || (Math.max(Math.abs(dataMax), 1) * 0.1);
+  const pad = span * 0.08;
+  let rawMin = opts.minY != null ? opts.minY : dataMin - pad;
+  let rawMax = opts.maxY != null ? opts.maxY : dataMax + pad;
+  // Non-negative metrics (steps, minutes, hours) shouldn't pad into negative territory;
+  // metrics that can genuinely go negative (e.g. circadian shift) are left alone.
+  if (opts.minY == null && dataMin >= 0) rawMin = Math.max(0, rawMin);
+  const { ticks, min: niceMin, max: niceMax } = niceTicks(rawMin, rawMax, opts.yTicks || 4);
+  const n = dates.length;
+  const x = (i) => padL + (i/(Math.max(n-1,1))) * (w-padL-padR);
+  const y = (v) => (h-padB) - ((v-niceMin)/((niceMax-niceMin)||1)) * (h-padB-padT);
+  const yFmt = opts.yFormat || (v => Math.round(v).toLocaleString());
+
+  const gridlines = ticks.map(t => `
+    <line x1="${padL}" y1="${y(t).toFixed(1)}" x2="${w-padR}" y2="${y(t).toFixed(1)}" stroke="var(--hair)" stroke-width="1"/>
+    <text x="${padL-6}" y="${(y(t)+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-dim)" font-family="var(--mono)">${yFmt(t)}</text>
+  `).join('');
+
+  // x-axis date ticks: ~4 evenly spaced points
+  const xTickCount = Math.min(4, n);
+  const xTickIdxs = [];
+  for (let k=0;k<xTickCount;k++) xTickIdxs.push(Math.round(k*(n-1)/(Math.max(xTickCount-1,1))));
+  const xLabels = [...new Set(xTickIdxs)].map(i => `
+    <text x="${x(i).toFixed(1)}" y="${h-4}" text-anchor="middle" font-size="9" fill="var(--ink-dim)" font-family="var(--mono)">${shortDate(dates[i])}</text>
+  `).join('');
+
+  const seriesSvg = chartSeries.map(s => {
+    if (s.mode === 'dots') {
+      return s.values.map((v,i) => v==null ? '' : `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.6" fill="${s.color}" opacity="0.55"/>`).join('');
+    }
+    let path = '', started = false;
+    s.values.forEach((v,i) => {
+      if (v==null) { started=false; return; }
+      path += (started?'L':'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1) + ' ';
+      started = true;
+    });
+    return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${s.width||2}" stroke-linejoin="round" stroke-linecap="round" ${s.dashed?'stroke-dasharray="4,3"':''}/>`;
+  }).join('');
+
+  const legend = (opts.legend !== false && chartSeries.length > 1) ? `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+      ${chartSeries.map(s => `<span style="font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:4px;">
+        <span style="display:inline-block;width:12px;height:2px;background:${s.color};${s.mode==='dots'?'height:0;border-top:2px dotted '+s.color+';':''}"></span>${s.label}
+      </span>`).join('')}
+    </div>` : '';
+
+  return `${legend}<svg class="chart" viewBox="0 0 ${w} ${h}">
+    ${gridlines}
+    ${xLabels}
+    ${seriesSvg}
   </svg>`;
 }
 
@@ -1029,47 +1104,77 @@ function renderTrends() {
   const derived = getDerivedAll();
   if (!derived.length) { el.innerHTML = `<div class="card card-empty">No entries yet.</div>`; return; }
   const last60 = derived.slice(-60);
+  const dates = last60.map(r=>r.date);
 
-  const weightSeries = last60.map(r=>({y:r._weight}));
-  const weight7Series = last60.map(r=>({y:r._weight7avg}));
-  const sleepSeries = last60.map(r=>({y:r._totalSleepHrs}));
-  const exSeries = last60.map(r=>({y:r._totalExerciseMin}));
-  const stepsSeries = last60.map(r=>({y:r.steps}));
-  const circSeries = last60.map(r=>({y:r._circadianShiftHours}));
+  const hasTravelInWindow = last60.some(r=>r.travelDay);
 
-  const stepsVar = stddev(last60.map(r=>r.steps));
-  const exVar = stddev(last60.map(r=>r._totalExerciseMin));
-  const consistencyScore = (stepsVar!=null) ? Math.max(0, 100-(stepsVar/100)) : null;
+  // Consistency stats (mean, not median — see note below; keeps CV mathematically consistent, stdev/mean)
+  const stepsArr = last60.map(r=>r.steps);
+  const exArr = last60.map(r=>r._totalExerciseMin);
+  const stepsMean = mean(stepsArr), stepsSD = stddev(stepsArr);
+  const exMean = mean(exArr), exSD = stddev(exArr);
+  const cvSteps = (stepsMean && stepsSD!=null) ? (stepsSD/stepsMean*100) : null;
+  const cvEx = (exMean && exSD!=null) ? (exSD/exMean*100) : null;
 
   el.innerHTML = `
     <div class="card">
-      <h2>Weight (last 60 days)</h2>
-      ${lineChart(weight7Series)}
-      <div class="chart-caption">7-day rolling average, ${last60[0].date} &ndash; ${last60[last60.length-1].date}</div>
+      <h2>Weight</h2>
+      ${multiChart(dates, [
+        { label:'Daily', color:'var(--ink-dim)', values: last60.map(r=>r._weight), mode:'dots' },
+        { label:'7-day avg', color:'var(--accent)', values: last60.map(r=>r._weight7avg), mode:'line', width:2.25 },
+        { label:'28-day avg', color:'var(--rust)', values: last60.map(r=>r._weight28avg), mode:'line', width:1.5 }
+      ], { yFormat:v=>Math.round(v) })}
+      <div class="chart-caption">${shortDate(dates[0])} &ndash; ${shortDate(dates[dates.length-1])}</div>
     </div>
-    <div class="card">
-      <h2>Sleep hours</h2>
-      ${lineChart(sleepSeries,{showAvgLine:true})}
-    </div>
-    <div class="card">
-      <h2>Exercise minutes/day</h2>
-      ${lineChart(exSeries,{showAvgLine:true})}
-    </div>
+
     <div class="card">
       <h2>Steps/day</h2>
-      ${lineChart(stepsSeries,{showAvgLine:true})}
+      ${multiChart(dates, [
+        { label:'Daily', color:'var(--ink-dim)', values: stepsArr, mode:'dots' },
+        { label:'7-day avg', color:'var(--accent)', values: last60.map(r=>r._steps7avg), mode:'line', width:2.25 },
+        { label:'28-day avg', color:'var(--rust)', values: last60.map(r=>r._steps28avg), mode:'line', width:1.5 }
+      ], { yFormat:v=>Math.round(v).toLocaleString() })}
     </div>
+
+    <div class="card">
+      <h2>Exercise minutes/day</h2>
+      ${multiChart(dates, [
+        { label:'Daily', color:'var(--ink-dim)', values: exArr, mode:'dots' },
+        { label:'7-day avg', color:'var(--accent)', values: last60.map(r=>r._exercise7avg), mode:'line', width:2.25 },
+        { label:'28-day avg', color:'var(--rust)', values: last60.map(r=>r._exercise28avg), mode:'line', width:1.5 }
+      ], { yFormat:v=>Math.round(v) })}
+    </div>
+
+    <div class="card">
+      <h2>&#128202; Consistency</h2>
+      <div class="grid2">
+        ${metricHTML('Avg steps', fmt0(stepsMean))}
+        ${metricHTML('Range (&plusmn;1 SD)', (stepsMean!=null && stepsSD!=null) ? fmt0(Math.max(0,stepsMean-stepsSD))+'&ndash;'+fmt0(stepsMean+stepsSD) : '—')}
+        ${metricHTML('Avg exercise (min)', fmt1(exMean))}
+        ${metricHTML('Range (&plusmn;1 SD)', (exMean!=null && exSD!=null) ? fmt1(Math.max(0,exMean-exSD))+'&ndash;'+fmt1(exMean+exSD) : '—')}
+        ${metricHTML('CV &mdash; steps', cvSteps!=null?cvSteps.toFixed(1)+'%':'—')}
+        ${metricHTML('CV &mdash; exercise', cvEx!=null?cvEx.toFixed(1)+'%':'—')}
+      </div>
+      <div class="confidence-note">Range = roughly what a typical day looks like (mean &plusmn; 1 standard deviation, floored at 0). CV (coefficient of variation) = std dev &divide; mean &mdash; lower means more consistent day-to-day, relative to your own average. Track CV over time rather than as a single snapshot.</div>
+    </div>
+
+    <div class="card">
+      <h2>Sleep hours</h2>
+      ${multiChart(dates, [
+        { label:'Daily', color:'var(--ink-dim)', values: last60.map(r=>r._totalSleepHrs), mode:'dots' },
+        { label:'7-day avg', color:'var(--accent)', values: last60.map(r=>r._sleep7avg), mode:'line', width:2.25 },
+        { label:'28-day avg', color:'var(--rust)', values: last60.map(r=>r._sleep28avg), mode:'line', width:1.5 }
+      ], { yFormat:v=>v.toFixed(1) })}
+    </div>
+
+    ${hasTravelInWindow ? `
     <div class="card">
       <h2>Circadian shift (hrs from usual)</h2>
-      ${lineChart(circSeries)}
-    </div>
-    <div class="card">
-      <h2>&#128202; Consistency (moved from Dashboard)</h2>
-      ${metricHTML('Steps variance', fmt1(stepsVar))}
-      ${metricHTML('Exercise variance', fmt1(exVar))}
-      ${metricHTML('Consistency score', consistencyScore!=null?fmt0(consistencyScore):'—')}
-      <div class="confidence-note">Higher consistency score = more even day-to-day activity, less boom/bust.</div>
-    </div>
+      ${multiChart(dates, [
+        { label:'Shift', color:'var(--rust)', values: last60.map(r=>r._circadianShiftHours), mode:'line', width:2 }
+      ], { legend:false, yFormat:v=>v.toFixed(1) })}
+      <div class="chart-caption">Positive = later than usual &middot; negative = earlier than usual</div>
+    </div>` : ''}
   `;
 }
 
