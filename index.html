@@ -1,1 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fluid Balance</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --ink: #12232B;
+    --panel: #1B363D;
+    --panel2: #182F35;
+    --field: #142B31;
+    --border: #2C474D;
+    --text: #ECEAE2;
+    --muted: #9FB6BA;
+    --muted2: #6F9AA0;
+    --blue: #6FC3E6;
+    --blue-dark: #3E8FB0;
+    --amber: #E0965A;
+    --gold: #F2D06B;
+    --violet: #9FB0E0;
+    --green: #8FD9A8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Spectral', serif;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 480px; padding: 22px 18px 60px; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; }
+  .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .btn-export {
+    background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; font-family: 'Spectral', serif;
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .tab-btn {
+    flex: 1; padding: 9px 0; border-radius: 9px; border: none; font-size: 13px; font-weight: 600;
+    text-transform: capitalize; cursor: pointer; background: var(--panel); color: var(--muted);
+  }
+  .tab-btn.active { background: var(--blue-dark); color: #0E1E23; }
+  .card { background: var(--panel); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted2); margin-bottom: 12px;
+  }
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
+  .stat-row .label { color: var(--muted); }
+  .stat-row .value { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; text-align: right; }
+  .stat-row .sub { font-size: 10px; color: var(--muted2); text-align: right; }
+  .divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .action-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .log-columns { display: flex; gap: 12px; margin-bottom: 16px; }
+  .log-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .log-col .since-card, .log-col .action-btn { flex: none; }
+  .action-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; border-radius: 12px; padding: 14px 12px; font-size: 15px; font-weight: 600;
+    cursor: pointer; color: #0E1E23; font-family: 'Spectral', serif;
+  }
+  .action-btn.in { background: var(--blue-dark); }
+  .action-btn.out { background: #C97B4A; }
+  .panel { background: var(--panel); border-radius: 16px; padding: 18px; margin-bottom: 20px; border: 1px solid; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .close-btn { background: none; border: none; color: var(--muted2); cursor: pointer; font-size: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    background: var(--field); color: var(--text); border-radius: 10px; padding: 8px 12px;
+    font-size: 13px; cursor: pointer; font-family: 'Spectral', serif; border: 1px solid var(--border);
+  }
+  .flag-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .flag-btn {
+    flex: 1; border-radius: 8px; padding: 7px 0; font-size: 12px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--field); color: var(--muted);
+  }
+  .flag-btn.active-wake { background: #2E2A17; color: var(--gold); border-color: var(--gold); }
+  .flag-btn.active-sleep { background: #1C2036; color: var(--violet); border-color: var(--violet); }
+  .urgency-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .urgency-btn {
+    flex: 1; border-radius: 8px; padding: 7px 2px; font-size: 10px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--field); color: var(--muted); text-align: center;
+  }
+  .urgency-btn.active { background: #4A2E2E; color: #F0A5A5; border-color: #F0A5A5; }
+  .leak-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .leak-btn {
+    flex: 1; border-radius: 8px; padding: 7px 0; font-size: 12px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--field); color: var(--muted);
+  }
+  .leak-btn.active-yes { background: #4A2E2E; color: #F0A5A5; border-color: #F0A5A5; }
+  .leak-btn.active-no { background: var(--field); color: var(--text); border-color: var(--muted2); }
+  .field-caption { font-size: 11px; color: var(--muted2); margin-bottom: 6px; }
+  .urgency-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #4A2E2E; color: #F0A5A5; white-space: nowrap; }
+  .location-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #1C2036; color: var(--violet); white-space: nowrap; }
+  .suppress-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #2E2A17; color: var(--gold); white-space: nowrap; }
+  .urge-start-btn {
+    width: 100%; background: none; border: 1px dashed var(--border); color: var(--muted);
+    border-radius: 10px; padding: 10px 0; font-size: 13px; cursor: pointer; margin-bottom: 16px; font-family: 'Spectral', serif;
+  }
+  .urge-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: #2E2A17; border: 1px solid var(--gold); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+  }
+  .urge-banner .msg { font-size: 13px; color: var(--gold); }
+  .urge-banner button {
+    background: none; border: 1px solid var(--gold); color: var(--gold); border-radius: 7px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  }
+  .leak-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #4A2E2E; color: #F0A5A5; white-space: nowrap; }
+  .stepper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .stepper button {
+    background: var(--field); border: 1px solid var(--border); color: var(--text); border-radius: 8px;
+    width: 34px; height: 34px; cursor: pointer; font-size: 16px;
+  }
+  .stepper input {
+    width: 80px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 18px;
+    background: var(--field); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 4px;
+  }
+  input[type=text], input[type=date] {
+    background: var(--field); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    padding: 9px 10px; font-size: 13px; font-family: 'Spectral', serif;
+  }
+  input[type=date] { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 8px; }
+  .full-width { width: 100%; box-sizing: border-box; margin-bottom: 14px; }
+  .add-confirm {
+    width: 100%; border: none; border-radius: 10px; padding: 11px 0; font-size: 14px; font-weight: 600;
+    cursor: pointer; color: #0E1E23; font-family: 'Spectral', serif;
+  }
+  .log-row {
+    display: flex; align-items: flex-start; gap: 10px; background: var(--panel2); border-radius: 10px;
+    padding: 9px 12px; margin-bottom: 6px;
+  }
+  .log-main { flex: 1; min-width: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .log-label { font-size: 13px; }
+  .log-time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted2); }
+  .log-gap { font-size: 10px; margin-top: 2px; color: #8FB0B5; }
+  .log-gap.overnight { color: #5A7378; font-style: italic; }
+  .tag-wrap { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .log-flag {
+    display: flex; align-items: center; gap: 3px; font-size: 10px; padding: 3px 7px; border-radius: 20px; white-space: nowrap;
+  }
+  .log-flag.wake { color: var(--gold); background: #2E2A17; }
+  .log-flag.sleep { color: var(--violet); background: #1C2036; }
+  .log-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .log-amount { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
+  .log-actions { display: flex; gap: 8px; }
+  .edit-btn { background: none; border: none; color: #4A6A70; cursor: pointer; font-size: 13px; }
+  .del-btn { background: none; border: none; color: #4A6A70; cursor: pointer; font-size: 14px; }
+  .since-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .since-card { flex: 1; background: var(--panel); border-radius: 12px; padding: 11px 13px; }
+  .since-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .since-value { font-family: 'IBM Plex Mono', monospace; font-size: 19px; font-weight: 600; }
+  .info-banner {
+    display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 18px; font-size: 12px; color: var(--muted2);
+  }
+  .range-box { background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
+  .range-label { font-size: 11px; color: #8FB0B5; margin-bottom: 8px; }
+  .range-inputs { display: flex; gap: 8px; }
+  .quick-range { display: flex; gap: 6px; margin-top: 8px; }
+  .quick-range button {
+    background: var(--field); border: 1px solid var(--border); color: #8FB0B5; border-radius: 7px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+  }
+  .empty-state { text-align: center; padding: 30px 0; color: var(--muted2); font-size: 13px; }
+  .gran-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .gran-btn {
+    flex: 1; padding: 6px 0; border-radius: 7px; border: none; font-size: 12px; font-weight: 600;
+    text-transform: capitalize; cursor: pointer; background: var(--field); color: #8FB0B5;
+  }
+  .gran-btn.active { background: var(--blue-dark); color: #0E1E23; }
+  .freq-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #24404689; font-size: 12px; }
+  .freq-row .f1 { flex: 1.3; color: var(--muted); }
+  .freq-row .f2 { flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .freq-legend { display: flex; font-size: 9px; color: #5A7378; margin-top: 8px; }
+  .freq-legend .f1 { flex: 1.3; }
+  .freq-legend .f2 { flex: 1; text-align: right; }
+  .compare-cols { display: flex; gap: 16px; }
+  .compare-col { flex: 1; }
+  .compare-col-title { font-size: 11px; color: #8FB0B5; margin-bottom: 6px; }
+  .range-picker-pair { display: flex; gap: 12px; margin-bottom: 16px; }
+  .range-picker { flex: 1; background: var(--panel); border-radius: 12px; padding: 12px; }
+  .range-picker-label { font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+  .compare-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .compare-row .c-label { flex: 1.2; font-size: 12px; color: var(--muted); }
+  .compare-row .c-val { flex: 1; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
 
+<script>
+/* ============================= STATE ============================= */
+const STORAGE_KEY = 'fluid_entries_v1';
+const URGE_KEY = 'fluid_pending_urge_v1';
+let pendingUrge = null; // { start: ISOString, waves: number } | null
+try { const raw = localStorage.getItem(URGE_KEY); pendingUrge = raw ? JSON.parse(raw) : null; } catch (e) { pendingUrge = null; }
+function saveUrge() { if (pendingUrge) localStorage.setItem(URGE_KEY, JSON.stringify(pendingUrge)); else localStorage.removeItem(URGE_KEY); }
+function startUrge() { if (!pendingUrge) { pendingUrge = { start: new Date().toISOString(), waves: 0 }; saveUrge(); } render(); }
+function logUrgeWave() { if (pendingUrge) { pendingUrge.waves = (pendingUrge.waves || 0) + 1; saveUrge(); render(); } }
+function cancelUrge() { pendingUrge = null; saveUrge(); render(); }
+
+const PAUSE_KEY = 'fluid_paused_ranges_v1';
+let pausedRanges = []; // [{ start: ISOString, end: ISOString | null }]
+try { const raw = localStorage.getItem(PAUSE_KEY); pausedRanges = raw ? JSON.parse(raw) : []; } catch (e) { pausedRanges = []; }
+function savePausedRanges() { localStorage.setItem(PAUSE_KEY, JSON.stringify(pausedRanges)); }
+function isPaused() { return pausedRanges.length > 0 && pausedRanges[pausedRanges.length - 1].end === null; }
+function pauseTracking() { if (!isPaused()) { pausedRanges.push({ start: new Date().toISOString(), end: null }); savePausedRanges(); } render(); }
+function resumeTracking() { if (isPaused()) { pausedRanges[pausedRanges.length - 1].end = new Date().toISOString(); savePausedRanges(); } render(); }
+function pausedMsBetween(fromMs, toMs) {
+  return pausedRanges.reduce((sum, p) => {
+    const ps = new Date(p.start).getTime();
+    const pe = p.end ? new Date(p.end).getTime() : Date.now();
+    const start = Math.max(ps, fromMs), end = Math.min(pe, toMs);
+    return sum + Math.max(0, end - start);
+  }, 0);
+}
+function overlapsAnyPause(fromMs, toMs) {
+  return pausedRanges.some((p) => {
+    const ps = new Date(p.start).getTime();
+    const pe = p.end ? new Date(p.end).getTime() : Date.now();
+    return fromMs < pe && toMs > ps;
+  });
+}
+
+let entries = [];
+try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { entries = []; }
+
+let state = {
+  tab: 'log',
+  panel: null,          // 'in' | 'out' | null
+  customAmount: null,
+  customLabel: '',
+  pendingFlag: null,     // 'wake' | 'sleep' | null — flag to attach to the entry about to be added
+  pendingUrgency: 'none', // 'none' | 'small' | 'moderate' | 'significant' | 'severe' — void entries only
+  pendingLeak: false,     // boolean — void entries only
+  pendingLocation: 'none', // 'none' | 'arriving' | 'departing' — void entries only
+  pendingSuppressionMinutes: null, // number | null — manual override of the auto-calculated urge duration
+  pendingUrgeWaves: null, // number | null — manual override of the auto-tracked urge-return count
+  editingId: null, // entry id being edited, or null when adding a new entry
+  pendingTimestamp: null, // string (datetime-local value) | null — null means "now"
+  insightsRange: null,   // { start, end }
+  granularity: 'day',
+  compareA: null,
+  compareB: null,
+};
+
+const URGENCY_LEVELS = ['none', 'small', 'moderate', 'significant', 'severe'];
+function urgencyIndex(u) { const i = URGENCY_LEVELS.indexOf(u || 'none'); return i < 0 ? 0 : i; }
+function urgencyLabelCap(u) { const s = u || 'none'; return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ============================= HELPERS ============================= */
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+function mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null; }
+function fmtDur(ms) {
+  const mins = Math.round(ms / 60000);
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function fmtDate(d) {
+  const dateObj = (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) ? new Date(d + 'T00:00:00') : new Date(d);
+  return dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function isoDate(d) {
+  const date = new Date(d);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function shiftDate(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + days); return isoDate(d);
+}
+function avgOf(arr, key) { return arr.length ? Math.round(arr.reduce((s, d) => s + d[key], 0) / arr.length) : 0; }
+function localInputValue(date) {
+  const d = date ? new Date(date) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function buildPeriods(list) {
+  const sorted = [...list].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const flagged = sorted.filter((e) => e.flag);
+  const periods = [];
+  for (let i = 0; i < flagged.length - 1; i++) {
+    const cur = flagged[i], next = flagged[i + 1];
+    const type = cur.flag === 'wake' ? 'day' : 'night';
+    const segEntries = sorted.filter((e) => new Date(e.timestamp) >= new Date(cur.timestamp) && new Date(e.timestamp) < new Date(next.timestamp));
+    // A night's date bucket is anchored to the wake flag that preceded it (the day it followed),
+    // not the literal sleep-tap timestamp — otherwise a sleep tap just after midnight gets
+    // misfiled under the next calendar day instead of the night it actually belongs to.
+    const dateAnchor = (type === 'night' && i > 0 && flagged[i - 1].flag === 'wake') ? flagged[i - 1].timestamp : cur.timestamp;
+    periods.push({ type, start: cur.timestamp, end: next.timestamp, entries: segEntries, dateAnchor });
+  }
+  // the stretch from your last flag to right now — still in progress, but real data
+  if (flagged.length) {
+    const last = flagged[flagged.length - 1];
+    const type = last.flag === 'wake' ? 'day' : 'night';
+    const nowIso = new Date().toISOString();
+    const segEntries = sorted.filter((e) => new Date(e.timestamp) >= new Date(last.timestamp) && new Date(e.timestamp) <= new Date(nowIso));
+    const priorFlag = flagged[flagged.length - 2];
+    const dateAnchor = (type === 'night' && priorFlag && priorFlag.flag === 'wake') ? priorFlag.timestamp : last.timestamp;
+    periods.push({ type, start: last.timestamp, end: nowIso, entries: segEntries, open: true, dateAnchor });
+  }
+  return periods;
+}
+
+function buildDayAggregates(list) {
+  const periods = buildPeriods(list);
+  const byDate = {};
+  periods.forEach((p) => {
+    const dateKey = isoDate(p.dateAnchor || p.start);
+    if (!byDate[dateKey]) byDate[dateKey] = { date: dateKey, dayIn: 0, dayOut: 0, nightIn: 0, nightOut: 0, firstMorningVoid: null, dayVoidCount: 0, nightVoidCount: 0, nightGaps: [], open: false };
+    if (p.open) byDate[dateKey].open = true;
+    const inTotal = p.entries.filter((e) => e.type === 'in').reduce((s, e) => s + e.amount, 0);
+    const outEntries = p.entries.filter((e) => e.type === 'out').sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const outTotal = outEntries.reduce((s, e) => s + e.amount, 0);
+    if (p.type === 'day') {
+      byDate[dateKey].dayIn += inTotal;
+      byDate[dateKey].dayOut += outTotal;
+      byDate[dateKey].dayVoidCount += outEntries.length;
+      if (outEntries.length) byDate[dateKey].firstMorningVoid = outEntries[0].amount;
+    } else {
+      byDate[dateKey].nightIn += inTotal;
+      byDate[dateKey].nightOut += outTotal;
+      byDate[dateKey].nightVoidCount += outEntries.length;
+      for (let i = 1; i < outEntries.length; i++) {
+        const prevMs = new Date(outEntries[i - 1].timestamp).getTime(), curMs = new Date(outEntries[i].timestamp).getTime();
+        if (overlapsAnyPause(prevMs, curMs)) continue;
+        byDate[dateKey].nightGaps.push({ ms: curMs - prevMs, date: outEntries[i].timestamp });
+      }
+    }
+  });
+  return Object.values(byDate).sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+function statsFromGaps(gaps) {
+  if (!gaps.length) return null;
+  const values = gaps.map((g) => g.ms);
+  const med = median(values), avg = mean(values);
+  const minG = gaps.reduce((a, b) => (a.ms < b.ms ? a : b));
+  const maxG = gaps.reduce((a, b) => (a.ms > b.ms ? a : b));
+  return { median: med, mean: avg, min: minG, max: maxG, diverges: Math.abs(med - avg) / med > 0.15 };
+}
+function durationStats(list, type) {
+  const times = list.filter((e) => e.type === type).map((e) => new Date(e.timestamp).getTime()).sort((a, b) => a - b);
+  const gaps = [];
+  for (let i = 1; i < times.length; i++) {
+    if (overlapsAnyPause(times[i - 1], times[i])) continue;
+    gaps.push({ ms: times[i] - times[i - 1], date: times[i] });
+  }
+  return statsFromGaps(gaps);
+}
+function isWeekendDate(dateStr) { const d = new Date(dateStr + 'T00:00:00').getDay(); return d === 0 || d === 6; }
+
+function amountSinceLastFlag(type) {
+  const flagged = [...entries].filter((e) => e.flag).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  if (!flagged.length) {
+    const today = isoDate(new Date());
+    const total = entries.filter((e) => e.type === type && isoDate(e.timestamp) === today).reduce((s, e) => s + e.amount, 0);
+    return { total, label: "Today's", fallback: true };
+  }
+  const lastFlag = flagged[0];
+  const total = entries
+    .filter((e) => e.type === type && new Date(e.timestamp) >= new Date(lastFlag.timestamp))
+    .reduce((s, e) => s + e.amount, 0);
+  const label = lastFlag.flag === 'wake' ? 'Since Wake' : 'Since Sleep';
+  return { total, label, fallback: false };
+}
+
+function bucketKey(dateStr, g) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (g === 'day') return dateStr;
+  if (g === 'week') { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const mon = new Date(d); mon.setDate(d.getDate() + diff); return isoDate(mon); }
+  return dateStr.slice(0, 7);
+}
+function bucketLabel(key, g) {
+  if (g === 'day') return fmtDate(key);
+  if (g === 'week') return `Week of ${fmtDate(key)}`;
+  const [y, m] = key.split('-');
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+function groupFrequency(dayAggs, g) {
+  const buckets = {};
+  dayAggs.forEach((d) => { const key = bucketKey(d.date, g); (buckets[key] = buckets[key] || []).push(d); });
+  return Object.entries(buckets).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([key, days]) => {
+    const allNightGaps = days.flatMap((d) => d.nightGaps);
+    return {
+      key, label: bucketLabel(key, g), days: days.length,
+      avgDayVoids: mean(days.map((d) => d.dayVoidCount)),
+      avgNightVoids: mean(days.map((d) => d.nightVoidCount)),
+      nightGapStats: statsFromGaps(allNightGaps),
+    };
+  });
+}
+
+function buildEntryDateMap(list) {
+  // Maps entry id -> the same flag-anchored date used by buildDayAggregates,
+  // so a post-midnight void still counts under the night it belongs to.
+  const periods = buildPeriods(list);
+  const map = {};
+  periods.forEach((p) => {
+    const key = isoDate(p.dateAnchor || p.start);
+    p.entries.forEach((e) => { map[e.id] = key; });
+  });
+  return map;
+}
+
+function groupUrgencyTrend(voidEntries, g, dateMap) {
+  const buckets = {};
+  voidEntries.forEach((e) => { const key = bucketKey((dateMap && dateMap[e.id]) || isoDate(e.timestamp), g); (buckets[key] = buckets[key] || []).push(e); });
+  return Object.entries(buckets).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([key, evs]) => {
+    const idxs = evs.map((e) => urgencyIndex(e.urgency));
+    const medIdx = Math.round(median(idxs));
+    const leakCount = evs.filter((e) => e.leak).length;
+    return {
+      key, label: bucketLabel(key, g), count: evs.length,
+      medianUrgency: URGENCY_LEVELS[medIdx],
+      leakRate: evs.length ? Math.round((leakCount / evs.length) * 100) : 0,
+    };
+  });
+}
+
+function urgencyLeakCrosstab(voidEntries) {
+  return URGENCY_LEVELS.map((level) => {
+    const atLevel = voidEntries.filter((e) => (e.urgency || 'none') === level);
+    const leaks = atLevel.filter((e) => e.leak).length;
+    return { level, count: atLevel.length, leakRate: atLevel.length ? Math.round((leaks / atLevel.length) * 100) : null };
+  });
+}
+
+function statsFromValues(items) {
+  // items: [{ value, date }] — value in whatever unit (here, minutes)
+  if (!items.length) return null;
+  const values = items.map((i) => i.value);
+  const med = median(values), avg = mean(values);
+  const minI = items.reduce((a, b) => (a.value < b.value ? a : b));
+  const maxI = items.reduce((a, b) => (a.value > b.value ? a : b));
+  return { median: med, mean: avg, min: minI, max: maxI, diverges: med ? Math.abs(med - avg) / med > 0.15 : false };
+}
+
+function groupSuppressionTrend(items, g) {
+  const buckets = {};
+  items.forEach((i) => { const key = bucketKey(i.dateKey || isoDate(i.date), g); (buckets[key] = buckets[key] || []).push(i.value); });
+  return Object.entries(buckets).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([key, vals]) => ({
+    key, label: bucketLabel(key, g), count: vals.length, medianMinutes: median(vals),
+  }));
+}
+
+function gapForEntry(ascAll, entry) {
+  const idx = ascAll.findIndex((e) => e.id === entry.id);
+  for (let i = idx - 1; i >= 0; i--) {
+    if (ascAll[i].type === entry.type) {
+      const prev = ascAll[i];
+      const prevMs = new Date(prev.timestamp).getTime(), curMs = new Date(entry.timestamp).getTime();
+      const gapMs = curMs - prevMs;
+      const overnight = ascAll.some((e2) => e2.flag === 'wake' && new Date(e2.timestamp) > new Date(prev.timestamp) && new Date(e2.timestamp) <= new Date(entry.timestamp));
+      const paused = overlapsAnyPause(prevMs, curMs);
+      return { gapMs, overnight, paused };
+    }
+  }
+  return null;
+}
+
+/* ============================= ACTIONS ============================= */
+function setTab(t) { state.tab = t; state.panel = null; render(); }
+function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; render(); }
+function closePanel() { state.panel = null; state.editingId = null; state.customAmount = null; state.customLabel = ''; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; render(); }
+function setPendingFlag(f) { state.pendingFlag = state.pendingFlag === f ? null : f; render(); }
+function setPendingUrgency(u) { state.pendingUrgency = u; render(); }
+function setPendingLeak(v) { state.pendingLeak = v; render(); }
+function setPendingLocation(v) { state.pendingLocation = v; render(); }
+function fillLabel(text) { state.customLabel = text; render(); }
+function setCustomAmount(v) { state.customAmount = Math.max(0, v); render(); }
+function setCustomLabel(v) { state.customLabel = v; }
+
+function addEntry(type, amount, label) {
+  if (!amount || amount <= 0) return;
+  const isEditing = !!state.editingId;
+  const ts = state.pendingTimestamp ? new Date(state.pendingTimestamp) : new Date();
+  const fields = {
+    type, amount: Math.round(amount), label: label || (type === 'in' ? 'Fluid' : 'Void'),
+    timestamp: ts.toISOString(), flag: state.pendingFlag || undefined,
+  };
+  if (type === 'out') {
+    fields.urgency = state.pendingUrgency || 'none';
+    fields.leak = !!state.pendingLeak;
+    fields.location = state.pendingLocation || 'none';
+    let suppressionMinutes = state.pendingSuppressionMinutes;
+    if (!isEditing && suppressionMinutes == null && pendingUrge) {
+      suppressionMinutes = Math.round((ts.getTime() - new Date(pendingUrge.start).getTime()) / 60000);
+    }
+    fields.suppressionMinutes = suppressionMinutes != null ? suppressionMinutes : undefined;
+    let urgeWaves = state.pendingUrgeWaves;
+    if (!isEditing && urgeWaves == null && pendingUrge) urgeWaves = pendingUrge.waves || 0;
+    fields.urgeWaves = urgeWaves != null ? urgeWaves : undefined;
+    if (!isEditing && pendingUrge) { pendingUrge = null; saveUrge(); }
+  }
+  if (isEditing) {
+    const idx = entries.findIndex((e) => e.id === state.editingId);
+    if (idx >= 0) entries[idx] = { ...entries[idx], ...fields };
+  } else {
+    fields.id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    entries.push(fields);
+  }
+  save();
+  closePanel();
+}
+function deleteEntry(id) { entries = entries.filter((e) => e.id !== id); save(); render(); }
+
+function editEntry(id) {
+  const e = entries.find((x) => x.id === id);
+  if (!e) return;
+  state.editingId = id;
+  state.panel = e.type;
+  state.pendingTimestamp = localInputValue(e.timestamp);
+  state.customAmount = e.amount;
+  state.customLabel = e.label || '';
+  state.pendingFlag = e.flag || null;
+  if (e.type === 'out') {
+    state.pendingUrgency = e.urgency || 'none';
+    state.pendingLeak = !!e.leak;
+    state.pendingLocation = e.location || 'none';
+    state.pendingSuppressionMinutes = e.suppressionMinutes != null ? e.suppressionMinutes : null;
+    state.pendingUrgeWaves = e.urgeWaves != null ? e.urgeWaves : null;
+  } else {
+    state.pendingUrgency = 'none';
+    state.pendingLeak = false;
+    state.pendingLocation = 'none';
+    state.pendingSuppressionMinutes = null;
+    state.pendingUrgeWaves = null;
+  }
+  render();
+}
+
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const entryRows = [...entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map((e) => ({
+    Date: isoDate(e.timestamp),
+    Time: new Date(e.timestamp).toLocaleTimeString(),
+    Type: e.type === 'in' ? 'Intake' : 'Output',
+    Label: e.label,
+    'Amount (mL)': e.amount,
+    'Peak Urgency': e.type === 'out' ? urgencyLabelCap(e.urgency) : '',
+    Leak: e.type === 'out' ? (e.leak ? 'Yes' : 'No') : '',
+    Location: e.type === 'out' ? urgencyLabelCap(e.location) : '',
+    'Suppression (min)': e.type === 'out' ? (e.suppressionMinutes != null ? e.suppressionMinutes : '') : '',
+    'Urge Returns': e.type === 'out' ? (e.urgeWaves != null ? e.urgeWaves : '') : '',
+    Flag: e.flag || '',
+  }));
+  const dayAggs = buildDayAggregates(entries);
+  const summaryRows = dayAggs.map((d) => ({
+    Date: d.date,
+    'Day Intake (mL)': d.dayIn,
+    'Day Output (mL)': d.dayOut,
+    'Night Intake (mL)': d.nightIn,
+    'Night Output (mL)': d.nightOut,
+    'Day Void Count': d.dayVoidCount,
+    'Night Void Count': d.nightVoidCount,
+    'First Morning Void (mL)': d.firstMorningVoid || '',
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entryRows), 'Entries');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Daily Summary');
+  XLSX.writeFile(wb, `fluid-balance-export-${isoDate(new Date())}.xlsx`);
+}
+
+/* ============================= RENDER: LOG TAB ============================= */
+function renderLogTab() {
+  const ascAll = [...entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const visible = [...entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 30);
+  const lastVoid = [...ascAll].reverse().find((e) => e.type === 'out');
+  const lastIntake = [...ascAll].reverse().find((e) => e.type === 'in');
+  const now = Date.now();
+  const paused = isPaused();
+  const voidMs = lastVoid ? Math.max(0, (now - new Date(lastVoid.timestamp).getTime()) - pausedMsBetween(new Date(lastVoid.timestamp).getTime(), now)) : null;
+  const intakeMs = lastIntake ? Math.max(0, (now - new Date(lastIntake.timestamp).getTime()) - pausedMsBetween(new Date(lastIntake.timestamp).getTime(), now)) : null;
+
+  const inSummary = amountSinceLastFlag('in');
+  const outSummary = amountSinceLastFlag('out');
+
+  let html = ``;
+  if (paused) {
+    const p = pausedRanges[pausedRanges.length - 1];
+    const elapsed = now - new Date(p.start).getTime();
+    html += `
+      <div class="urge-banner" style="background:#2A2A2A;border-color:#5A5A5A;">
+        <span class="msg" style="color:#B8B8B8;">⏸ Tracking paused — ${fmtDur(elapsed)} so far</span>
+        <button onclick="resumeTracking()" style="border-color:#B8B8B8;color:#B8B8B8;">▶ Resume tracking</button>
+      </div>`;
+  } else {
+    html += `<button class="urge-start-btn" onclick="pauseTracking()" style="margin-bottom:10px;">⏸ Pause tracking</button>`;
+  }
+
+  if (pendingUrge) {
+    const elapsedMs = Date.now() - new Date(pendingUrge.start).getTime();
+    html += `
+      <div class="urge-banner">
+        <span class="msg">⚡ Suppressing urge — ${fmtDur(elapsedMs)} so far${pendingUrge.waves ? ` · returned ${pendingUrge.waves}x` : ''}</span>
+        <span style="display:flex;gap:6px;">
+          <button onclick="logUrgeWave()">Urge returned</button>
+          <button onclick="cancelUrge()">Cancel</button>
+        </span>
+      </div>`;
+  } else if (!paused) {
+    html += `<button class="urge-start-btn" onclick="startUrge()">⚡ I feel an urge</button>`;
+  }
+
+  html += `
+    <div class="log-columns">
+      <div class="log-col">
+        <button class="action-btn in" onclick="openPanel('in')">+ Add Intake</button>
+        <div class="since-card"><div class="since-label">Since last intake</div><div class="since-value" style="color:var(--blue)">${paused ? 'Paused' : (intakeMs != null ? fmtDur(intakeMs) : '—')}</div></div>
+        <div class="since-card"><div class="since-label">${inSummary.fallback ? "Today's intake" : `Intake ${inSummary.label}`}</div><div class="since-value" style="color:var(--blue)">${inSummary.total} mL</div></div>
+      </div>
+      <div class="log-col">
+        <button class="action-btn out" onclick="openPanel('out')">+ Add Output</button>
+        <div class="since-card"><div class="since-label">Since last void</div><div class="since-value" style="color:var(--amber)">${paused ? 'Paused' : (voidMs != null ? fmtDur(voidMs) : '—')}</div></div>
+        <div class="since-card"><div class="since-label">${outSummary.fallback ? "Today's output" : `Output ${outSummary.label}`}</div><div class="since-value" style="color:var(--amber)">${outSummary.total} mL</div></div>
+      </div>
+    </div>`;
+
+  if (state.panel) html += renderEntryPanel(state.panel);
+
+  html += `<div style="font-size:12px;color:var(--muted2);margin-bottom:10px;">Wake / sleep flags mark the boundary used to compute day vs. night — no fixed clock cutoff. The totals above reset at your last wake/sleep flag, not at midnight (falls back to a calendar-day total until you've set your first flag).</div>`;
+
+  if (!visible.length) {
+    html += `<div class="empty-state">Nothing logged yet. Tap a button above to record your first entry.</div>`;
+  } else {
+    visible.forEach((e) => {
+      const gap = gapForEntry(ascAll, e);
+      const color = e.type === 'in' ? 'var(--blue)' : 'var(--amber)';
+      const tags = [
+        e.flag === 'wake' ? `<span class="log-flag wake">☀ woke</span>` : '',
+        e.flag === 'sleep' ? `<span class="log-flag sleep">☾ slept</span>` : '',
+        e.type === 'out' && e.urgency && e.urgency !== 'none' ? `<span class="urgency-tag">${urgencyLabelCap(e.urgency)}</span>` : '',
+        e.type === 'out' && e.leak ? `<span class="leak-tag">Leak</span>` : '',
+        e.type === 'out' && e.location && e.location !== 'none' ? `<span class="location-tag">${e.location === 'arriving' ? 'Arriving' : 'Departing'}</span>` : '',
+        e.type === 'out' && e.suppressionMinutes != null ? `<span class="suppress-tag">${e.suppressionMinutes}m suppressed</span>` : '',
+        e.type === 'out' && e.urgeWaves ? `<span class="suppress-tag">↩ returned ${e.urgeWaves}x</span>` : '',
+      ].filter(Boolean).join('');
+      html += `
+        <div class="log-row">
+          <div class="dot" style="background:${color}"></div>
+          <div class="log-main">
+            <div class="log-label">${escapeHtml(e.label)}</div>
+            <div class="log-time">${new Date(e.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+            ${gap ? `<div class="log-gap${(gap.overnight || gap.paused) ? ' overnight' : ''}">${fmtDur(gap.gapMs)} since last ${e.type === 'in' ? 'intake' : 'void'}${gap.paused ? ' (includes a paused stretch)' : (gap.overnight ? ' (spans overnight)' : '')}</div>` : ''}
+            ${tags ? `<div class="tag-wrap">${tags}</div>` : ''}
+          </div>
+          <div class="log-right">
+            <div class="log-amount" style="color:${color}">${e.type === 'in' ? '+' : '−'}${e.amount}mL</div>
+            <div class="log-actions">
+              <button class="edit-btn" onclick="editEntry('${e.id}')">✎</button>
+              <button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button>
+            </div>
+          </div>
+        </div>`;
+    });
+  }
+  return html;
+}
+
+function renderUrgencyLeakControls() {
+  return `
+    <div class="field-caption">Peak urgency this episode</div>
+    <div class="urgency-row">
+      ${URGENCY_LEVELS.map((u) => `<button class="urgency-btn ${state.pendingUrgency === u ? 'active' : ''}" onclick="setPendingUrgency('${u}')">${urgencyLabelCap(u)}</button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">The strongest it got, not necessarily how it felt right at the end.</div>
+    <div class="field-caption">Leak beforehand?</div>
+    <div class="leak-row">
+      <button class="leak-btn ${!state.pendingLeak ? 'active-no' : ''}" onclick="setPendingLeak(false)">No</button>
+      <button class="leak-btn ${state.pendingLeak ? 'active-yes' : ''}" onclick="setPendingLeak(true)">Yes</button>
+    </div>`;
+}
+
+function renderTimePicker() {
+  return `
+    <div class="field-caption">When did this happen?</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input type="datetime-local" style="flex:1" value="${state.pendingTimestamp || localInputValue()}" onchange="state.pendingTimestamp=this.value; render();" />
+      ${state.pendingTimestamp ? `<button class="close-btn" style="border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:11px;color:var(--muted2)" onclick="state.pendingTimestamp=null; render();">Now</button>` : ''}
+    </div>`;
+}
+
+function renderAmountStepper() {
+  const displayVal = state.customAmount == null ? '' : state.customAmount;
+  return `
+    <div class="field-caption">Amount</div>
+    <div class="stepper" style="margin-bottom:16px;">
+      <button onclick="setCustomAmount((${displayVal || 0}) - 50)">−</button>
+      <input type="text" inputmode="numeric" placeholder="mL" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">mL</span>
+      <button onclick="setCustomAmount((${displayVal || 0}) + 50)">+</button>
+    </div>`;
+}
+
+function renderFlagRow() {
+  return `
+    <div class="flag-row">
+      <button class="flag-btn ${state.pendingFlag === 'wake' ? 'active-wake' : ''}" onclick="setPendingFlag('wake')">☀ I just woke up</button>
+      <button class="flag-btn ${state.pendingFlag === 'sleep' ? 'active-sleep' : ''}" onclick="setPendingFlag('sleep')">☾ I'm going to sleep</button>
+    </div>`;
+}
+
+function renderSuppressionField() {
+  let autoMinutes = null;
+  if (pendingUrge) autoMinutes = Math.round((Date.now() - new Date(pendingUrge.start).getTime()) / 60000);
+  const val = state.pendingSuppressionMinutes != null ? state.pendingSuppressionMinutes : (autoMinutes != null ? autoMinutes : '');
+  const wavesVal = state.pendingUrgeWaves != null ? state.pendingUrgeWaves : (pendingUrge ? (pendingUrge.waves || 0) : '');
+  return `
+    <div class="field-caption">Suppression duration (urge → void)</div>
+    <div class="stepper" style="margin-bottom:6px;">
+      <input type="text" inputmode="numeric" placeholder="minutes" style="width:100px;" value="${val}" oninput="state.pendingSuppressionMinutes = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">min</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">
+      ${pendingUrge
+        ? `Auto-filled from your "urge started" tap at ${new Date(pendingUrge.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} — edit if needed.`
+        : `No urge tap recorded — leave blank or estimate manually.`}
+    </div>
+    <div class="field-caption">Urge returns before voiding</div>
+    <div class="stepper" style="margin-bottom:6px;">
+      <input type="text" inputmode="numeric" placeholder="0" style="width:100px;" value="${wavesVal}" oninput="state.pendingUrgeWaves = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">times</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">
+      ${pendingUrge
+        ? `Auto-filled from your "Urge returned" taps — edit if needed.`
+        : `No active urge tracked — leave blank or estimate manually.`}
+    </div>`;
+}
+
+function renderEntryPanel(type) {
+  return type === 'out' ? renderOutputPanel() : renderIntakePanel();
+}
+
+function renderIntakePanel() {
+  const accent = 'var(--blue-dark)';
+  return `
+    <div class="panel" style="border-color:${accent}">
+      <div class="panel-head">
+        <span style="font-size:15px;font-weight:600">${state.editingId ? 'Edit intake' : 'Log intake'}</span>
+        <button class="close-btn" onclick="closePanel()">✕</button>
+      </div>
+      ${renderTimePicker()}
+      ${renderAmountStepper()}
+      <div class="chips">
+        <button class="chip" style="border-color:${accent}" onclick="fillLabel('Water')">Water</button>
+        <button class="chip" style="border-color:${accent}" onclick="fillLabel('Coffee')">Coffee</button>
+        <button class="chip" style="border-color:${accent}" onclick="fillLabel('Milk')">Milk</button>
+      </div>
+      <input class="full-width" type="text" id="customLabelInput" placeholder="Label (e.g. Water, Coffee, Tea, IV, soup)" value="${escapeHtml(state.customLabel)}" oninput="state.customLabel=this.value" />
+      ${renderFlagRow()}
+      <button class="add-confirm" style="background:${accent}" onclick="addEntry('in', state.customAmount, document.getElementById('customLabelInput').value)">${state.editingId ? 'Update' : 'Add'}</button>
+    </div>`;
+}
+
+function renderOutputPanel() {
+  const accent = 'var(--amber)';
+  return `
+    <div class="panel" style="border-color:${accent}">
+      <div class="panel-head">
+        <span style="font-size:15px;font-weight:600">${state.editingId ? 'Edit output' : 'Log output'}</span>
+        <button class="close-btn" onclick="closePanel()">✕</button>
+      </div>
+      ${renderTimePicker()}
+      ${renderAmountStepper()}
+      ${renderUrgencyLeakControls()}
+      <div class="field-caption">Location</div>
+      <div class="urgency-row">
+        <button class="urgency-btn ${state.pendingLocation === 'none' ? 'active' : ''}" onclick="setPendingLocation('none')">None</button>
+        <button class="urgency-btn ${state.pendingLocation === 'arriving' ? 'active' : ''}" onclick="setPendingLocation('arriving')">Arriving</button>
+        <button class="urgency-btn ${state.pendingLocation === 'departing' ? 'active' : ''}" onclick="setPendingLocation('departing')">Departing</button>
+      </div>
+      ${renderSuppressionField()}
+      ${renderFlagRow()}
+      <button class="add-confirm" style="background:${accent}" onclick="addEntry('out', state.customAmount, 'Void')">${state.editingId ? 'Update' : 'Add'}</button>
+    </div>`;
+}
+
+/* ============================= RENDER: INSIGHTS TAB ============================= */
+function computeRangeStats(range) {
+  const dayAggs = buildDayAggregates(entries);
+  const filteredDayAggs = dayAggs.filter((d) => d.date >= range.start && d.date <= range.end);
+  const filteredEntries = entries.filter((e) => { const dk = isoDate(e.timestamp); return dk >= range.start && dk <= range.end; });
+  const intakeAmounts = filteredEntries.filter((e) => e.type === 'in').map((e) => e.amount);
+  const outputAmounts = filteredEntries.filter((e) => e.type === 'out').map((e) => e.amount);
+  const intakeDur = durationStats(filteredEntries, 'in');
+  const outputDur = durationStats(filteredEntries, 'out');
+  const weekdayAggs = filteredDayAggs.filter((d) => !isWeekendDate(d.date));
+  const weekendAggs = filteredDayAggs.filter((d) => isWeekendDate(d.date));
+  const morningVoids = filteredDayAggs.filter((d) => d.firstMorningVoid);
+  const avgFirstVoid = morningVoids.length ? Math.round(morningVoids.reduce((s, d) => s + d.firstMorningVoid, 0) / morningVoids.length) : null;
+  const allNightGaps = filteredDayAggs.flatMap((d) => d.nightGaps);
+  const nightGapStats = statsFromGaps(allNightGaps);
+  const avgDayVoids = filteredDayAggs.length ? (mean(filteredDayAggs.map((d) => d.dayVoidCount)) || 0) : 0;
+  const avgNightVoids = filteredDayAggs.length ? (mean(filteredDayAggs.map((d) => d.nightVoidCount)) || 0) : 0;
+  const voidEntries = filteredEntries.filter((e) => e.type === 'out');
+  const overallLeakRate = voidEntries.length ? Math.round((voidEntries.filter((e) => e.leak).length / voidEntries.length) * 100) : null;
+  const medianUrgencyLabel = voidEntries.length ? URGENCY_LEVELS[Math.round(median(voidEntries.map((e) => urgencyIndex(e.urgency))))] : null;
+  const crosstab = urgencyLeakCrosstab(voidEntries);
+  const suppressionItems = voidEntries.filter((e) => e.suppressionMinutes != null).map((e) => ({ value: e.suppressionMinutes, date: e.timestamp }));
+  const suppressionStats = statsFromValues(suppressionItems);
+  const urgeWavesRecorded = voidEntries.filter((e) => e.urgeWaves != null);
+  const avgUrgeWaves = urgeWavesRecorded.length ? mean(urgeWavesRecorded.map((e) => e.urgeWaves)) : null;
+  const totalDayIntake = filteredDayAggs.reduce((s, d) => s + d.dayIn, 0);
+  const totalDayVoid = filteredDayAggs.reduce((s, d) => s + d.dayOut, 0);
+  const totalNightIntake = filteredDayAggs.reduce((s, d) => s + (d.nightIn || 0), 0);
+  const totalNightVoid = filteredDayAggs.reduce((s, d) => s + d.nightOut, 0);
+  const includesOpenPeriod = filteredDayAggs.some((d) => d.open);
+
+  return {
+    range, dayAggs, filteredDayAggs, filteredEntries, voidEntries,
+    days: filteredDayAggs.length,
+    intakeAmounts, outputAmounts, intakeDur, outputDur,
+    weekdayAggs, weekendAggs, avgFirstVoid, nightGapStats,
+    avgDayVoids, avgNightVoids, overallLeakRate, medianUrgencyLabel, crosstab,
+    suppressionStats, avgUrgeWaves, includesOpenPeriod,
+    totalDayIntake, totalDayVoid, totalNightIntake, totalNightVoid,
+  };
+}
+
+function renderInsightsTab() {
+  const dayAggsAll = buildDayAggregates(entries);
+  const minDate = dayAggsAll[0]?.date, maxDate = dayAggsAll[dayAggsAll.length - 1]?.date;
+  if (!state.insightsRange) state.insightsRange = { start: minDate, end: maxDate };
+  const range = state.insightsRange;
+
+  let html = `
+    <div class="range-box">
+      <div class="range-label">Showing insights for</div>
+      <div class="range-inputs">
+        <input type="date" value="${range.start || ''}" min="${minDate || ''}" max="${maxDate || ''}" onchange="state.insightsRange.start=this.value; render();" />
+        <input type="date" value="${range.end || ''}" min="${minDate || ''}" max="${maxDate || ''}" onchange="state.insightsRange.end=this.value; render();" />
+      </div>
+      <div class="quick-range">
+        <button onclick="state.insightsRange={start: '${maxDate}', end: '${maxDate}'}; render();">Today</button>
+        <button onclick="state.insightsRange={start: shiftDate('${maxDate}', -6), end: '${maxDate}'}; render();">7d</button>
+        <button onclick="state.insightsRange={start: shiftDate('${maxDate}', -29), end: '${maxDate}'}; render();">30d</button>
+        <button onclick="state.insightsRange={start: '${minDate}', end: '${maxDate}'}; render();">All</button>
+      </div>
+    </div>`;
+
+  const s = computeRangeStats(range);
+  if (!s.filteredDayAggs.length) return html + `<div class="empty-state">No entries in this range.</div>`;
+
+  if (s.includesOpenPeriod) {
+    html += `<div style="font-size:11px;color:var(--gold);margin-bottom:14px;">⚡ This range includes your current, still-open day/night period (since your last wake/sleep flag) — those numbers will keep changing until you tap your next flag.</div>`;
+  }
+
+  const freqRows = groupFrequency(s.filteredDayAggs, state.granularity).slice(-8);
+  const entryDateMap = buildEntryDateMap(entries);
+  const urgencyTrendRows = groupUrgencyTrend(s.voidEntries, state.granularity, entryDateMap).slice(-8);
+  const suppressionItemsWithKey = s.voidEntries.filter((e) => e.suppressionMinutes != null).map((e) => ({ value: e.suppressionMinutes, date: e.timestamp, dateKey: entryDateMap[e.id] }));
+  const suppressionTrendRows = groupSuppressionTrend(suppressionItemsWithKey, state.granularity).slice(-8);
+
+  html += `
+    <div class="card">
+      <div class="card-title">Per-entry medians (${s.filteredDayAggs.length} day${s.filteredDayAggs.length === 1 ? '' : 's'})</div>
+      <div class="stat-row"><span class="label">Median intake</span><span class="value" style="color:var(--blue)">${s.intakeAmounts.length ? Math.round(median(s.intakeAmounts)) : '—'} mL</span></div>
+      <div class="stat-row"><span class="label">Median output</span><span class="value" style="color:var(--amber)">${s.outputAmounts.length ? Math.round(median(s.outputAmounts)) : '—'} mL</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Totals for this range</div>
+      <div class="compare-cols">
+        <div class="compare-col">
+          <div class="compare-col-title">Day</div>
+          <div class="stat-row"><span class="label">Intake</span><span class="value" style="color:var(--blue)">${s.totalDayIntake} mL</span></div>
+          <div class="stat-row"><span class="label">Void</span><span class="value" style="color:var(--amber)">${s.totalDayVoid} mL</span></div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div class="compare-col">
+          <div class="compare-col-title">Night</div>
+          <div class="stat-row"><span class="label">Intake</span><span class="value" style="color:var(--blue)">${s.totalNightIntake} mL</span></div>
+          <div class="stat-row"><span class="label">Void</span><span class="value" style="color:var(--amber)">${s.totalNightVoid} mL</span></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:8px;">Sums, not averages — total volume across the whole selected range.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">First morning void</div>
+      <div class="stat-row"><span class="label">Average volume</span><span class="value" style="color:var(--gold)">${s.avgFirstVoid != null ? s.avgFirstVoid + ' mL' : '—'}</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Reflects overnight production — tracked separately from your day total.</div>
+    </div>
+    ${renderDurationCard('Time between intakes', s.intakeDur, 'var(--blue)')}
+    ${renderDurationCard('Time between voids', s.outputDur, 'var(--amber)')}
+    <div class="card">
+      <div class="card-title">Void frequency</div>
+      <div class="stat-row"><span class="label">Avg voids per day</span><span class="value" style="color:var(--blue)">${s.avgDayVoids.toFixed(1)}</span></div>
+      <div class="stat-row"><span class="label">Avg voids per night</span><span class="value" style="color:var(--violet)">${s.avgNightVoids.toFixed(1)}</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Night count reflects voids between your sleep and wake flags — your nocturia frequency.</div>
+    </div>
+    ${renderDurationCard('Time between nighttime voids', s.nightGapStats, 'var(--violet)')}
+    <div class="card">
+      <div class="card-title">Weekday vs. weekend averages</div>
+      <div class="compare-cols">
+        <div class="compare-col">
+          <div class="compare-col-title">Weekday</div>
+          <div class="stat-row"><span class="label">Day intake</span><span class="value" style="color:var(--blue)">${avgOf(s.weekdayAggs, 'dayIn')} mL</span></div>
+          <div class="stat-row"><span class="label">Day output</span><span class="value" style="color:var(--amber)">${avgOf(s.weekdayAggs, 'dayOut')} mL</span></div>
+          <div class="stat-row"><span class="label">Night intake</span><span class="value" style="color:var(--blue)">${avgOf(s.weekdayAggs, 'nightIn')} mL</span></div>
+          <div class="stat-row"><span class="label">Night output</span><span class="value" style="color:var(--violet)">${avgOf(s.weekdayAggs, 'nightOut')} mL</span></div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div class="compare-col">
+          <div class="compare-col-title">Weekend</div>
+          <div class="stat-row"><span class="label">Day intake</span><span class="value" style="color:var(--blue)">${avgOf(s.weekendAggs, 'dayIn')} mL</span></div>
+          <div class="stat-row"><span class="label">Day output</span><span class="value" style="color:var(--amber)">${avgOf(s.weekendAggs, 'dayOut')} mL</span></div>
+          <div class="stat-row"><span class="label">Night intake</span><span class="value" style="color:var(--blue)">${avgOf(s.weekendAggs, 'nightIn')} mL</span></div>
+          <div class="stat-row"><span class="label">Night output</span><span class="value" style="color:var(--violet)">${avgOf(s.weekendAggs, 'nightOut')} mL</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Void frequency over time</div>
+      <div class="gran-tabs">
+        ${['day', 'week', 'month'].map((g) => `<button class="gran-btn ${state.granularity === g ? 'active' : ''}" onclick="state.granularity='${g}'; render();">${g}</button>`).join('')}
+      </div>
+      ${freqRows.map((row) => `
+        <div class="freq-row">
+          <div class="f1">${row.label}</div>
+          <div class="f2" style="color:var(--blue)">${row.avgDayVoids.toFixed(1)}/day</div>
+          <div class="f2" style="color:var(--violet)">${row.avgNightVoids.toFixed(1)}/night</div>
+          <div class="f2" style="color:var(--muted2)">${row.nightGapStats ? fmtDur(row.nightGapStats.median) : '—'}</div>
+        </div>`).join('')}
+      <div class="freq-legend"><div class="f1"></div><div class="f2">day voids</div><div class="f2">night voids</div><div class="f2">night gap (med.)</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Urgency &amp; leaks</div>
+      <div class="stat-row"><span class="label">Median peak urgency</span><span class="value" style="color:#F0A5A5">${s.medianUrgencyLabel != null ? urgencyLabelCap(s.medianUrgencyLabel) : '—'}</span></div>
+      <div class="stat-row"><span class="label">Leak rate</span><span class="value" style="color:#F0A5A5">${s.overallLeakRate != null ? s.overallLeakRate + '%' : '—'}</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Blank fields at logging time count as "none" / "no" — see note below.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Urgency vs. leak</div>
+      ${s.crosstab.map((row) => `
+        <div class="freq-row">
+          <div class="f1">${urgencyLabelCap(row.level)}</div>
+          <div class="f2" style="color:var(--muted2)">${row.count} void${row.count === 1 ? '' : 's'}</div>
+          <div class="f2" style="color:#F0A5A5">${row.leakRate != null ? row.leakRate + '% leaked' : '—'}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Urgency &amp; leak trend</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Uses the same day/week/month toggle as void frequency above.</div>
+      ${urgencyTrendRows.map((row) => `
+        <div class="freq-row">
+          <div class="f1">${row.label}</div>
+          <div class="f2" style="color:#F0A5A5">${urgencyLabelCap(row.medianUrgency)}</div>
+          <div class="f2" style="color:#F0A5A5">${row.leakRate}% leaked</div>
+          <div class="f2" style="color:var(--muted2)">${row.count} voids</div>
+        </div>`).join('')}
+      <div class="freq-legend"><div class="f1"></div><div class="f2">med. urgency</div><div class="f2">leak rate</div><div class="f2">voids</div></div>
+    </div>
+    ${renderMinuteDurationCard('Urge suppression duration', s.suppressionStats, 'var(--gold)')}
+    <div class="card">
+      <div class="card-title">Urge suppression trend</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Uses the same day/week/month toggle as above. Only voids with a recorded suppression duration are counted.</div>
+      ${suppressionTrendRows.length ? suppressionTrendRows.map((row) => `
+        <div class="freq-row">
+          <div class="f1">${row.label}</div>
+          <div class="f2" style="color:var(--gold)">${Math.round(row.medianMinutes)}m median</div>
+          <div class="f2" style="color:var(--muted2)">${row.count} tracked</div>
+        </div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No suppression durations recorded in this range yet.</div>`}
+    </div>`;
+  return html;
+}
+
+function renderDurationCard(title, stat, color) {
+  if (!stat) return '';
+  return `
+    <div class="card">
+      <div class="card-title">${title}</div>
+      <div class="stat-row"><span class="label">Typical gap (median)</span><span class="value" style="color:${color}">${fmtDur(stat.median)}</span></div>
+      ${stat.diverges ? `<div class="stat-row"><span class="label">Mean (skewed by outliers)</span><span class="value">${fmtDur(stat.mean)}</span></div>` : ''}
+      <div class="divider"></div>
+      <div class="stat-row"><span class="label">Longest stretch</span><span class="value" style="color:var(--green)">${fmtDur(stat.max.ms)}<div class="sub">${fmtDate(stat.max.date)}</div></span></div>
+      <div class="stat-row"><span class="label">Shortest gap</span><span class="value" style="color:var(--amber)">${fmtDur(stat.min.ms)}<div class="sub">${fmtDate(stat.min.date)}</div></span></div>
+    </div>`;
+}
+
+function renderMinuteDurationCard(title, stat, color) {
+  if (!stat) return `<div class="card"><div class="card-title">${title}</div><div style="font-size:12px;color:var(--muted2);">No suppression durations recorded in this range yet — tap "I feel an urge" on the Log tab, or fill in the field manually when logging output.</div></div>`;
+  const fmtMin = (m) => `${Math.round(m)}m`;
+  return `
+    <div class="card">
+      <div class="card-title">${title}</div>
+      <div class="stat-row"><span class="label">Typical (median)</span><span class="value" style="color:${color}">${fmtMin(stat.median)}</span></div>
+      ${stat.diverges ? `<div class="stat-row"><span class="label">Mean (skewed by outliers)</span><span class="value">${fmtMin(stat.mean)}</span></div>` : ''}
+      <div class="divider"></div>
+      <div class="stat-row"><span class="label">Longest held</span><span class="value" style="color:var(--green)">${fmtMin(stat.max.value)}<div class="sub">${fmtDate(stat.max.date)}</div></span></div>
+      <div class="stat-row"><span class="label">Shortest held</span><span class="value" style="color:var(--amber)">${fmtMin(stat.min.value)}<div class="sub">${fmtDate(stat.min.date)}</div></span></div>
+    </div>`;
+}
+
+/* ============================= RENDER: COMPARE TAB ============================= */
+function renderCompareTab() {
+  const dayAggsAll = buildDayAggregates(entries);
+  const minDate = dayAggsAll[0]?.date, maxDate = dayAggsAll[dayAggsAll.length - 1]?.date;
+  if (!state.compareA) state.compareA = { start: minDate, end: maxDate, label: 'Range A' };
+  if (!state.compareB) state.compareB = { start: minDate, end: maxDate, label: 'Range B' };
+
+  const a = computeRangeStats(state.compareA);
+  const b = computeRangeStats(state.compareB);
+
+  function rangePicker(range, key, accent) {
+    return `
+      <div class="range-picker">
+        <div class="range-picker-label" style="color:${accent}">${range.label}</div>
+        <input type="date" value="${range.start || ''}" min="${minDate || ''}" max="${maxDate || ''}" style="width:100%;margin-bottom:6px;" onchange="state.${key}.start=this.value; render();" />
+        <input type="date" value="${range.end || ''}" min="${minDate || ''}" max="${maxDate || ''}" style="width:100%;" onchange="state.${key}.end=this.value; render();" />
+      </div>`;
+  }
+
+  const mDur = (stat) => (stat ? fmtDur(stat.median) : '—');
+  const mMin = (stat) => (stat ? `${Math.round(stat.median)}m` : '—');
+
+  return `
+    <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;">Pick two date ranges to compare side by side — e.g. first week of January vs. first week of July. Shows the same metrics as Insights, for both ranges at once.</div>
+    <div class="range-picker-pair">
+      ${rangePicker(state.compareA, 'compareA', 'var(--blue)')}
+      ${rangePicker(state.compareB, 'compareB', 'var(--amber)')}
+    </div>
+    <div class="card">
+      <div class="card-title">Overview</div>
+      ${compareRow('Days in range', a.days, b.days)}
+      ${compareRow('Median intake/entry', a.intakeAmounts.length ? Math.round(median(a.intakeAmounts)) + ' mL' : '—', b.intakeAmounts.length ? Math.round(median(b.intakeAmounts)) + ' mL' : '—')}
+      ${compareRow('Median output/entry', a.outputAmounts.length ? Math.round(median(a.outputAmounts)) + ' mL' : '—', b.outputAmounts.length ? Math.round(median(b.outputAmounts)) + ' mL' : '—')}
+      ${compareRow('First morning void avg', a.avgFirstVoid != null ? a.avgFirstVoid + ' mL' : '—', b.avgFirstVoid != null ? b.avgFirstVoid + ' mL' : '—')}
+    </div>
+    <div class="card">
+      <div class="card-title">Totals (sums, not averages)</div>
+      ${compareRow('Day intake total', a.totalDayIntake + ' mL', b.totalDayIntake + ' mL')}
+      ${compareRow('Day void total', a.totalDayVoid + ' mL', b.totalDayVoid + ' mL')}
+      ${compareRow('Night intake total', a.totalNightIntake + ' mL', b.totalNightIntake + ' mL')}
+      ${compareRow('Night void total', a.totalNightVoid + ' mL', b.totalNightVoid + ' mL')}
+    </div>
+    <div class="card">
+      <div class="card-title">Duration &amp; frequency</div>
+      ${compareRow('Time between intakes (median)', mDur(a.intakeDur), mDur(b.intakeDur))}
+      ${compareRow('Time between voids (median)', mDur(a.outputDur), mDur(b.outputDur))}
+      ${compareRow('Time between nighttime voids (median)', mDur(a.nightGapStats), mDur(b.nightGapStats))}
+      ${compareRow('Avg voids per day', a.avgDayVoids.toFixed(1), b.avgDayVoids.toFixed(1))}
+      ${compareRow('Avg voids per night', a.avgNightVoids.toFixed(1), b.avgNightVoids.toFixed(1))}
+    </div>
+    <div class="card">
+      <div class="card-title">Weekday vs. weekend (avg day intake / void)</div>
+      ${compareRow('Weekday', avgOf(a.weekdayAggs, 'dayIn') + ' / ' + avgOf(a.weekdayAggs, 'dayOut') + ' mL', avgOf(b.weekdayAggs, 'dayIn') + ' / ' + avgOf(b.weekdayAggs, 'dayOut') + ' mL')}
+      ${compareRow('Weekend', avgOf(a.weekendAggs, 'dayIn') + ' / ' + avgOf(a.weekendAggs, 'dayOut') + ' mL', avgOf(b.weekendAggs, 'dayIn') + ' / ' + avgOf(b.weekendAggs, 'dayOut') + ' mL')}
+    </div>
+    <div class="card">
+      <div class="card-title">Urgency, leaks &amp; suppression</div>
+      ${compareRow('Median peak urgency', a.medianUrgencyLabel != null ? urgencyLabelCap(a.medianUrgencyLabel) : '—', b.medianUrgencyLabel != null ? urgencyLabelCap(b.medianUrgencyLabel) : '—')}
+      ${compareRow('Leak rate', a.overallLeakRate != null ? a.overallLeakRate + '%' : '—', b.overallLeakRate != null ? b.overallLeakRate + '%' : '—')}
+      ${compareRow('Suppression duration (median)', mMin(a.suppressionStats), mMin(b.suppressionStats))}
+      ${compareRow('Urge returns (avg)', a.avgUrgeWaves != null ? a.avgUrgeWaves.toFixed(1) : '—', b.avgUrgeWaves != null ? b.avgUrgeWaves.toFixed(1) : '—')}
+    </div>`;
+}
+function compareRow(label, a, b) {
+  return `<div class="compare-row"><div class="c-label">${label}</div><div class="c-val" style="color:var(--blue)">${a}</div><div style="margin:0 6px;color:#4A6A70">→</div><div class="c-val" style="color:var(--amber)">${b}</div></div>`;
+}
+
+/* ============================= MAIN RENDER ============================= */
+function escapeHtml(s) { const d = document.createElement('div'); d.innerText = s == null ? '' : s; return d.innerHTML; }
+
+function render() {
+  const app = document.getElementById('app');
+  let body = '';
+  if (state.tab === 'log') body = renderLogTab();
+  if (state.tab === 'insights') body = renderInsightsTab();
+  if (state.tab === 'compare') body = renderCompareTab();
+
+  app.innerHTML = `
+    <div class="header-row">
+      <h1>Fluid Balance</h1>
+      <button class="btn-export" onclick="exportExcel()">⬇ Export to Excel</button>
+    </div>
+    <div class="tabs">
+      ${['log', 'insights', 'compare'].map((t) => `<button class="tab-btn ${state.tab === t ? 'active' : ''}" onclick="setTab('${t}')">${t}</button>`).join('')}
+    </div>
+    ${body}
+  `;
+}
+
+setInterval(() => { if (state.tab === 'log' && !state.panel) render(); }, 30000);
+render();
+</script>
+</body>
+</html>
