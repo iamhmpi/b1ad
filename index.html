@@ -58,11 +58,11 @@
   .divider { height: 1px; background: var(--border); margin: 10px 0; }
   .action-row { display: flex; gap: 12px; margin-bottom: 20px; }
   .log-columns { display: flex; gap: 12px; margin-bottom: 16px; }
-  .log-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .log-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .log-col .since-card, .log-col .action-btn { flex: none; }
   .action-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    border: none; border-radius: 12px; padding: 14px 12px; font-size: 15px; font-weight: 600;
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; border-radius: 10px; padding: 9px 10px; font-size: 13px; font-weight: 600;
     cursor: pointer; color: #0E1E23; font-family: 'Spectral', serif;
   }
   .action-btn.in { background: var(--blue-dark); }
@@ -98,6 +98,16 @@
   .field-caption { font-size: 11px; color: var(--muted2); margin-bottom: 6px; }
   .urgency-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #4A2E2E; color: #F0A5A5; white-space: nowrap; }
   .location-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #1C2036; color: var(--violet); white-space: nowrap; }
+  .color-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .color-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border-radius: 8px; padding: 6px 0; cursor: pointer; border: 1px solid var(--border); background: var(--field);
+  }
+  .color-btn.active { border-color: var(--text); }
+  .color-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); }
+  .color-btn span { font-size: 10px; color: var(--muted); }
+  .color-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--field); color: var(--muted); white-space: nowrap; }
+  .color-tag .color-swatch { width: 9px; height: 9px; }
   .suppress-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #2E2A17; color: var(--gold); white-space: nowrap; }
   .urge-start-btn {
     width: 100%; background: none; border: 1px dashed var(--border); color: var(--muted);
@@ -112,6 +122,16 @@
     background: none; border: 1px solid var(--gold); color: var(--gold); border-radius: 7px;
     padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
   }
+  .pressure-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: #16323A; border: 1px solid #6FD9D9; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+  }
+  .pressure-banner .msg { font-size: 13px; color: #6FD9D9; }
+  .pressure-banner button {
+    background: none; border: 1px solid #6FD9D9; color: #6FD9D9; border-radius: 7px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  }
+  .pressure-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #16323A; color: #6FD9D9; white-space: nowrap; }
   .leak-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: #4A2E2E; color: #F0A5A5; white-space: nowrap; }
   .stepper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .stepper button {
@@ -154,9 +174,9 @@
   .edit-btn { background: none; border: none; color: #4A6A70; cursor: pointer; font-size: 13px; }
   .del-btn { background: none; border: none; color: #4A6A70; cursor: pointer; font-size: 14px; }
   .since-row { display: flex; gap: 10px; margin-bottom: 14px; }
-  .since-card { flex: 1; background: var(--panel); border-radius: 12px; padding: 11px 13px; }
-  .since-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-  .since-value { font-family: 'IBM Plex Mono', monospace; font-size: 19px; font-weight: 600; }
+  .since-card { flex: 1; background: var(--panel); border-radius: 9px; padding: 6px 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .since-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  .since-value { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; white-space: nowrap; }
   .info-banner {
     display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 10px;
     padding: 10px 12px; margin-bottom: 18px; font-size: 12px; color: var(--muted2);
@@ -199,14 +219,6 @@
 <script>
 /* ============================= STATE ============================= */
 const STORAGE_KEY = 'fluid_entries_v1';
-const URGE_KEY = 'fluid_pending_urge_v1';
-let pendingUrge = null; // { start: ISOString, waves: number } | null
-try { const raw = localStorage.getItem(URGE_KEY); pendingUrge = raw ? JSON.parse(raw) : null; } catch (e) { pendingUrge = null; }
-function saveUrge() { if (pendingUrge) localStorage.setItem(URGE_KEY, JSON.stringify(pendingUrge)); else localStorage.removeItem(URGE_KEY); }
-function startUrge() { if (!pendingUrge) { pendingUrge = { start: new Date().toISOString(), waves: 0 }; saveUrge(); } render(); }
-function logUrgeWave() { if (pendingUrge) { pendingUrge.waves = (pendingUrge.waves || 0) + 1; saveUrge(); render(); } }
-function cancelUrge() { pendingUrge = null; saveUrge(); render(); }
-
 const PAUSE_KEY = 'fluid_paused_ranges_v1';
 let pausedRanges = []; // [{ start: ISOString, end: ISOString | null }]
 try { const raw = localStorage.getItem(PAUSE_KEY); pausedRanges = raw ? JSON.parse(raw) : []; } catch (e) { pausedRanges = []; }
@@ -230,6 +242,45 @@ function overlapsAnyPause(fromMs, toMs) {
   });
 }
 
+// Sensation events: single self-contained records of "I felt pressure/urgency strong
+// enough to engage a technique". No open episodes, nothing to close — the next void
+// automatically summarizes all events since the previous void.
+const SENSATION_KEY = 'fluid_sensation_events_v1';
+let sensationEvents = []; // [{ id, kind: 'pressure'|'urge', technique, timestamp }]
+try { const raw = localStorage.getItem(SENSATION_KEY); sensationEvents = raw ? JSON.parse(raw) : []; } catch (e) { sensationEvents = []; }
+function saveSensationEvents() { localStorage.setItem(SENSATION_KEY, JSON.stringify(sensationEvents)); }
+
+const TECHNIQUES = ['Relaxation', 'Distraction', 'Kegel flicks', 'Combination'];
+
+function beginSensation(kind) { state.sensationPicking = kind; render(); }
+function cancelSensation() { state.sensationPicking = null; render(); }
+function logSensation(technique) {
+  if (!state.sensationPicking) return;
+  sensationEvents.push({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    kind: state.sensationPicking,
+    technique,
+    timestamp: new Date().toISOString(),
+  });
+  saveSensationEvents();
+  state.sensationPicking = null;
+  render();
+}
+function deleteSensation(id) { sensationEvents = sensationEvents.filter((s) => s.id !== id); saveSensationEvents(); render(); }
+
+// All sensation events since the previous void and up to a given moment.
+function sensationsSincePrevVoid(uptoTs) {
+  const uptoMs = new Date(uptoTs).getTime();
+  const priorVoids = entries
+    .filter((e) => e.type === 'out' && new Date(e.timestamp).getTime() < uptoMs)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const fromMs = priorVoids.length ? new Date(priorVoids[0].timestamp).getTime() : 0;
+  return sensationEvents.filter((s) => {
+    const t = new Date(s.timestamp).getTime();
+    return t > fromMs && t <= uptoMs;
+  });
+}
+
 let entries = [];
 try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { entries = []; }
 
@@ -237,13 +288,17 @@ let state = {
   tab: 'log',
   panel: null,          // 'in' | 'out' | null
   customAmount: null,
+  pendingUnit: 'mL', // 'mL' | 'oz' — input convenience only; everything is always stored/shown in mL
+  pendingColor: null, // 1-4 | null — urine color, void entries only
   customLabel: '',
   pendingFlag: null,     // 'wake' | 'sleep' | null — flag to attach to the entry about to be added
   pendingUrgency: 'none', // 'none' | 'small' | 'moderate' | 'significant' | 'severe' — void entries only
   pendingLeak: false,     // boolean — void entries only
   pendingLocation: 'none', // 'none' | 'arriving' | 'departing' — void entries only
-  pendingSuppressionMinutes: null, // number | null — manual override of the auto-calculated urge duration
-  pendingUrgeWaves: null, // number | null — manual override of the auto-tracked urge-return count
+  pendingSuppressionMinutes: null, // number | null — legacy field, still shown when editing older entries that have it
+  pendingUrgeWaves: null, // number | null — legacy field, still shown when editing older entries that have it
+  pendingPressureMinutes: null, // number | null — legacy field, still shown when editing older entries that have it
+  sensationPicking: null, // 'pressure' | 'urge' | null — which sensation's technique picker is open
   editingId: null, // entry id being edited, or null when adding a new entry
   pendingTimestamp: null, // string (datetime-local value) | null — null means "now"
   insightsRange: null,   // { start, end }
@@ -253,6 +308,12 @@ let state = {
 };
 
 const URGENCY_LEVELS = ['none', 'small', 'moderate', 'significant', 'severe'];
+const URINE_COLORS = [
+  { level: 1, color: '#F5F0C9' },
+  { level: 2, color: '#EAD86A' },
+  { level: 3, color: '#D9A441' },
+  { level: 4, color: '#8C5A2B' },
+];
 function urgencyIndex(u) { const i = URGENCY_LEVELS.indexOf(u || 'none'); return i < 0 ? 0 : i; }
 function urgencyLabelCap(u) { const s = u || 'none'; return s.charAt(0).toUpperCase() + s.slice(1); }
 
@@ -433,6 +494,15 @@ function groupUrgencyTrend(voidEntries, g, dateMap) {
   });
 }
 
+function groupColorTrend(voidEntries, g, dateMap) {
+  const buckets = {};
+  voidEntries.filter((e) => e.color != null).forEach((e) => { const key = bucketKey((dateMap && dateMap[e.id]) || isoDate(e.timestamp), g); (buckets[key] = buckets[key] || []).push(e); });
+  return Object.entries(buckets).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([key, evs]) => ({
+    key, label: bucketLabel(key, g), count: evs.length,
+    medianColor: Math.round(median(evs.map((e) => e.color))),
+  }));
+}
+
 function urgencyLeakCrosstab(voidEntries) {
   return URGENCY_LEVELS.map((level) => {
     const atLevel = voidEntries.filter((e) => (e.urgency || 'none') === level);
@@ -459,6 +529,26 @@ function groupSuppressionTrend(items, g) {
   }));
 }
 
+function sensationsForVoid(voidEntry) {
+  // Events between the previous void (exclusive) and this void (inclusive) — computed
+  // dynamically so backdating/edits stay correct.
+  const uptoMs = new Date(voidEntry.timestamp).getTime();
+  const priorVoids = entries
+    .filter((e) => e.type === 'out' && e.id !== voidEntry.id && new Date(e.timestamp).getTime() < uptoMs)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const fromMs = priorVoids.length ? new Date(priorVoids[0].timestamp).getTime() : 0;
+  const evs = sensationEvents.filter((s) => {
+    const t = new Date(s.timestamp).getTime();
+    return t > fromMs && t <= uptoMs;
+  });
+  return {
+    events: evs,
+    pressureCount: evs.filter((s) => s.kind === 'pressure').length,
+    urgeCount: evs.filter((s) => s.kind === 'urge').length,
+    firstEventMs: evs.length ? Math.min(...evs.map((s) => new Date(s.timestamp).getTime())) : null,
+  };
+}
+
 function gapForEntry(ascAll, entry) {
   const idx = ascAll.findIndex((e) => e.id === entry.id);
   for (let i = idx - 1; i >= 0; i--) {
@@ -476,37 +566,37 @@ function gapForEntry(ascAll, entry) {
 
 /* ============================= ACTIONS ============================= */
 function setTab(t) { state.tab = t; state.panel = null; render(); }
-function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; render(); }
-function closePanel() { state.panel = null; state.editingId = null; state.customAmount = null; state.customLabel = ''; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; render(); }
+function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
+function closePanel() { state.panel = null; state.editingId = null; state.customAmount = null; state.customLabel = ''; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
 function setPendingFlag(f) { state.pendingFlag = state.pendingFlag === f ? null : f; render(); }
 function setPendingUrgency(u) { state.pendingUrgency = u; render(); }
 function setPendingLeak(v) { state.pendingLeak = v; render(); }
 function setPendingLocation(v) { state.pendingLocation = v; render(); }
+function setPendingColor(v) { state.pendingColor = state.pendingColor === v ? null : v; render(); }
 function fillLabel(text) { state.customLabel = text; render(); }
 function setCustomAmount(v) { state.customAmount = Math.max(0, v); render(); }
+function setUnit(u) { if (state.pendingUnit !== u) { state.pendingUnit = u; state.customAmount = null; render(); } }
+const ML_PER_OZ = 29.5735;
 function setCustomLabel(v) { state.customLabel = v; }
 
 function addEntry(type, amount, label) {
   if (!amount || amount <= 0) return;
   const isEditing = !!state.editingId;
+  const amountMl = (!isEditing && state.pendingUnit === 'oz') ? Math.round(amount * ML_PER_OZ) : Math.round(amount);
   const ts = state.pendingTimestamp ? new Date(state.pendingTimestamp) : new Date();
   const fields = {
-    type, amount: Math.round(amount), label: label || (type === 'in' ? 'Fluid' : 'Void'),
+    type, amount: amountMl, label: label || (type === 'in' ? 'Fluid' : 'Void'),
     timestamp: ts.toISOString(), flag: state.pendingFlag || undefined,
   };
   if (type === 'out') {
     fields.urgency = state.pendingUrgency || 'none';
     fields.leak = !!state.pendingLeak;
     fields.location = state.pendingLocation || 'none';
-    let suppressionMinutes = state.pendingSuppressionMinutes;
-    if (!isEditing && suppressionMinutes == null && pendingUrge) {
-      suppressionMinutes = Math.round((ts.getTime() - new Date(pendingUrge.start).getTime()) / 60000);
-    }
-    fields.suppressionMinutes = suppressionMinutes != null ? suppressionMinutes : undefined;
-    let urgeWaves = state.pendingUrgeWaves;
-    if (!isEditing && urgeWaves == null && pendingUrge) urgeWaves = pendingUrge.waves || 0;
-    fields.urgeWaves = urgeWaves != null ? urgeWaves : undefined;
-    if (!isEditing && pendingUrge) { pendingUrge = null; saveUrge(); }
+    fields.color = state.pendingColor != null ? state.pendingColor : undefined;
+    // Legacy fields — kept when editing entries recorded under the old episode model.
+    fields.suppressionMinutes = state.pendingSuppressionMinutes != null ? state.pendingSuppressionMinutes : undefined;
+    fields.urgeWaves = state.pendingUrgeWaves != null ? state.pendingUrgeWaves : undefined;
+    fields.pressureMinutes = state.pendingPressureMinutes != null ? state.pendingPressureMinutes : undefined;
   }
   if (isEditing) {
     const idx = entries.findIndex((e) => e.id === state.editingId);
@@ -529,18 +619,23 @@ function editEntry(id) {
   state.customAmount = e.amount;
   state.customLabel = e.label || '';
   state.pendingFlag = e.flag || null;
+  state.pendingUnit = 'mL';
   if (e.type === 'out') {
     state.pendingUrgency = e.urgency || 'none';
     state.pendingLeak = !!e.leak;
     state.pendingLocation = e.location || 'none';
     state.pendingSuppressionMinutes = e.suppressionMinutes != null ? e.suppressionMinutes : null;
     state.pendingUrgeWaves = e.urgeWaves != null ? e.urgeWaves : null;
+    state.pendingPressureMinutes = e.pressureMinutes != null ? e.pressureMinutes : null;
+    state.pendingColor = e.color != null ? e.color : null;
   } else {
     state.pendingUrgency = 'none';
     state.pendingLeak = false;
     state.pendingLocation = 'none';
     state.pendingSuppressionMinutes = null;
     state.pendingUrgeWaves = null;
+    state.pendingPressureMinutes = null;
+    state.pendingColor = null;
   }
   render();
 }
@@ -556,8 +651,12 @@ function exportExcel() {
     'Peak Urgency': e.type === 'out' ? urgencyLabelCap(e.urgency) : '',
     Leak: e.type === 'out' ? (e.leak ? 'Yes' : 'No') : '',
     Location: e.type === 'out' ? urgencyLabelCap(e.location) : '',
-    'Suppression (min)': e.type === 'out' ? (e.suppressionMinutes != null ? e.suppressionMinutes : '') : '',
-    'Urge Returns': e.type === 'out' ? (e.urgeWaves != null ? e.urgeWaves : '') : '',
+    'Pressure Events Held Off': e.type === 'out' ? sensationsForVoid(e).pressureCount : '',
+    'Urge Events Held Off': e.type === 'out' ? sensationsForVoid(e).urgeCount : '',
+    'Suppression (min, legacy)': e.type === 'out' ? (e.suppressionMinutes != null ? e.suppressionMinutes : '') : '',
+    'Urge Returns (legacy)': e.type === 'out' ? (e.urgeWaves != null ? e.urgeWaves : '') : '',
+    'Pressure Before Urgent (min, legacy)': e.type === 'out' ? (e.pressureMinutes != null ? e.pressureMinutes : '') : '',
+    'Urine Color (1-4)': e.type === 'out' ? (e.color != null ? e.color : '') : '',
     Flag: e.flag || '',
   }));
   const dayAggs = buildDayAggregates(entries);
@@ -571,8 +670,15 @@ function exportExcel() {
     'Night Void Count': d.nightVoidCount,
     'First Morning Void (mL)': d.firstMorningVoid || '',
   }));
+  const sensationRows = [...sensationEvents].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map((s) => ({
+    Date: isoDate(s.timestamp),
+    Time: new Date(s.timestamp).toLocaleTimeString(),
+    Sensation: s.kind === 'pressure' ? 'Pressure' : 'Urge',
+    Technique: s.technique,
+  }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entryRows), 'Entries');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Daily Summary');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sensationRows), 'Sensation Events');
   XLSX.writeFile(wb, `fluid-balance-export-${isoDate(new Date())}.xlsx`);
 }
 
@@ -603,18 +709,26 @@ function renderLogTab() {
     html += `<button class="urge-start-btn" onclick="pauseTracking()" style="margin-bottom:10px;">⏸ Pause tracking</button>`;
   }
 
-  if (pendingUrge) {
-    const elapsedMs = Date.now() - new Date(pendingUrge.start).getTime();
+  if (state.sensationPicking && !paused) {
+    const isP = state.sensationPicking === 'pressure';
     html += `
-      <div class="urge-banner">
-        <span class="msg">⚡ Suppressing urge — ${fmtDur(elapsedMs)} so far${pendingUrge.waves ? ` · returned ${pendingUrge.waves}x` : ''}</span>
-        <span style="display:flex;gap:6px;">
-          <button onclick="logUrgeWave()">Urge returned</button>
-          <button onclick="cancelUrge()">Cancel</button>
+      <div class="pressure-banner" style="${isP ? '' : 'background:#2E2A17;border-color:var(--gold);'}">
+        <span class="msg" style="${isP ? '' : 'color:var(--gold);'}">${isP ? '🌊 Pressure' : '⚡ Urge'} — what are you using?</span>
+        <span style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${TECHNIQUES.map((t) => `<button style="${isP ? '' : 'border-color:var(--gold);color:var(--gold);'}" onclick="logSensation('${t}')">${t}</button>`).join('')}
+          <button style="${isP ? '' : 'border-color:var(--gold);color:var(--gold);'}" onclick="cancelSensation()">✕</button>
         </span>
       </div>`;
   } else if (!paused) {
-    html += `<button class="urge-start-btn" onclick="startUrge()">⚡ I feel an urge</button>`;
+    const recentEvs = sensationsSincePrevVoid(new Date().toISOString());
+    const evNote = recentEvs.length
+      ? `<div style="font-size:11px;color:#6FD9D9;margin-bottom:10px;">${recentEvs.filter((s)=>s.kind==='pressure').length} pressure + ${recentEvs.filter((s)=>s.kind==='urge').length} urge event${recentEvs.length === 1 ? '' : 's'} held off since last void</div>`
+      : '';
+    html += `
+      <div style="display:flex;gap:8px;margin-bottom:${recentEvs.length ? '6' : '16'}px;">
+        <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('pressure')">🌊 Pressure</button>
+        <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('urge')">⚡ Urge</button>
+      </div>${evNote}`;
   }
 
   html += `
@@ -641,14 +755,21 @@ function renderLogTab() {
     visible.forEach((e) => {
       const gap = gapForEntry(ascAll, e);
       const color = e.type === 'in' ? 'var(--blue)' : 'var(--amber)';
+      const sens = e.type === 'out' ? sensationsForVoid(e) : null;
+      const sensTag = sens && sens.events.length
+        ? `<span class="pressure-tag">${[sens.pressureCount ? `🌊${sens.pressureCount}` : '', sens.urgeCount ? `⚡${sens.urgeCount}` : ''].filter(Boolean).join(' ')} held off</span>`
+        : '';
       const tags = [
         e.flag === 'wake' ? `<span class="log-flag wake">☀ woke</span>` : '',
         e.flag === 'sleep' ? `<span class="log-flag sleep">☾ slept</span>` : '',
         e.type === 'out' && e.urgency && e.urgency !== 'none' ? `<span class="urgency-tag">${urgencyLabelCap(e.urgency)}</span>` : '',
         e.type === 'out' && e.leak ? `<span class="leak-tag">Leak</span>` : '',
         e.type === 'out' && e.location && e.location !== 'none' ? `<span class="location-tag">${e.location === 'arriving' ? 'Arriving' : 'Departing'}</span>` : '',
+        sensTag,
         e.type === 'out' && e.suppressionMinutes != null ? `<span class="suppress-tag">${e.suppressionMinutes}m suppressed</span>` : '',
         e.type === 'out' && e.urgeWaves ? `<span class="suppress-tag">↩ returned ${e.urgeWaves}x</span>` : '',
+        e.type === 'out' && e.pressureMinutes != null ? `<span class="pressure-tag">🌊 ${e.pressureMinutes}m pressure first</span>` : '',
+        e.type === 'out' && e.color != null ? `<span class="color-tag"><span class="color-swatch" style="background:${URINE_COLORS[e.color - 1].color}"></span>Color ${e.color}</span>` : '',
       ].filter(Boolean).join('');
       html += `
         <div class="log-row">
@@ -697,13 +818,19 @@ function renderTimePicker() {
 
 function renderAmountStepper() {
   const displayVal = state.customAmount == null ? '' : state.customAmount;
+  const isOz = state.pendingUnit === 'oz';
+  const step = isOz ? 1 : 50;
   return `
     <div class="field-caption">Amount</div>
-    <div class="stepper" style="margin-bottom:16px;">
-      <button onclick="setCustomAmount((${displayVal || 0}) - 50)">−</button>
-      <input type="text" inputmode="numeric" placeholder="mL" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
-      <span style="color:var(--muted2);font-size:13px">mL</span>
-      <button onclick="setCustomAmount((${displayVal || 0}) + 50)">+</button>
+    <div class="stepper" style="margin-bottom:8px;">
+      <button onclick="setCustomAmount((${displayVal || 0}) - ${step})">−</button>
+      <input type="text" inputmode="decimal" placeholder="${isOz ? 'oz' : 'mL'}" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">${isOz ? 'oz' : 'mL'}</span>
+      <button onclick="setCustomAmount((${displayVal || 0}) + ${step})">+</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button class="urgency-btn ${!isOz ? 'active' : ''}" onclick="setUnit('mL')" style="flex:none;padding:4px 14px;">mL</button>
+      <button class="urgency-btn ${isOz ? 'active' : ''}" onclick="setUnit('oz')" style="flex:none;padding:4px 14px;">oz</button>
     </div>`;
 }
 
@@ -716,31 +843,45 @@ function renderFlagRow() {
 }
 
 function renderSuppressionField() {
-  let autoMinutes = null;
-  if (pendingUrge) autoMinutes = Math.round((Date.now() - new Date(pendingUrge.start).getTime()) / 60000);
-  const val = state.pendingSuppressionMinutes != null ? state.pendingSuppressionMinutes : (autoMinutes != null ? autoMinutes : '');
-  const wavesVal = state.pendingUrgeWaves != null ? state.pendingUrgeWaves : (pendingUrge ? (pendingUrge.waves || 0) : '');
-  return `
-    <div class="field-caption">Suppression duration (urge → void)</div>
-    <div class="stepper" style="margin-bottom:6px;">
-      <input type="text" inputmode="numeric" placeholder="minutes" style="width:100px;" value="${val}" oninput="state.pendingSuppressionMinutes = this.value === '' ? null : (Number(this.value)||0)" />
+  // Live preview of the sensation events this void will summarize (new entries only).
+  let summaryHtml = '';
+  if (!state.editingId) {
+    const evs = sensationsSincePrevVoid(new Date().toISOString());
+    if (evs.length) {
+      const p = evs.filter((s) => s.kind === 'pressure').length;
+      const u = evs.filter((s) => s.kind === 'urge').length;
+      const parts = [];
+      if (p) parts.push(`${p} pressure`);
+      if (u) parts.push(`${u} urge`);
+      summaryHtml = `
+        <div class="field-caption">Held off since last void</div>
+        <div style="font-size:13px;color:#6FD9D9;margin-bottom:14px;">${parts.join(' + ')} event${evs.length === 1 ? '' : 's'} — will be attached to this void automatically.</div>`;
+    }
+  }
+  // Legacy fields — only shown when editing an entry recorded under the old episode model.
+  let legacyHtml = '';
+  if (state.editingId && (state.pendingSuppressionMinutes != null || state.pendingUrgeWaves != null || state.pendingPressureMinutes != null)) {
+    legacyHtml = `
+    ${state.pendingPressureMinutes != null ? `
+    <div class="field-caption">Pressure duration (legacy)</div>
+    <div class="stepper" style="margin-bottom:14px;">
+      <input type="text" inputmode="numeric" style="width:100px;" value="${state.pendingPressureMinutes}" oninput="state.pendingPressureMinutes = this.value === '' ? null : (Number(this.value)||0)" />
       <span style="color:var(--muted2);font-size:13px">min</span>
-    </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">
-      ${pendingUrge
-        ? `Auto-filled from your "urge started" tap at ${new Date(pendingUrge.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} — edit if needed.`
-        : `No urge tap recorded — leave blank or estimate manually.`}
-    </div>
-    <div class="field-caption">Urge returns before voiding</div>
-    <div class="stepper" style="margin-bottom:6px;">
-      <input type="text" inputmode="numeric" placeholder="0" style="width:100px;" value="${wavesVal}" oninput="state.pendingUrgeWaves = this.value === '' ? null : (Number(this.value)||0)" />
+    </div>` : ''}
+    ${state.pendingSuppressionMinutes != null ? `
+    <div class="field-caption">Suppression duration (legacy)</div>
+    <div class="stepper" style="margin-bottom:14px;">
+      <input type="text" inputmode="numeric" style="width:100px;" value="${state.pendingSuppressionMinutes}" oninput="state.pendingSuppressionMinutes = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">min</span>
+    </div>` : ''}
+    ${state.pendingUrgeWaves != null ? `
+    <div class="field-caption">Urge returns (legacy)</div>
+    <div class="stepper" style="margin-bottom:14px;">
+      <input type="text" inputmode="numeric" style="width:100px;" value="${state.pendingUrgeWaves}" oninput="state.pendingUrgeWaves = this.value === '' ? null : (Number(this.value)||0)" />
       <span style="color:var(--muted2);font-size:13px">times</span>
-    </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">
-      ${pendingUrge
-        ? `Auto-filled from your "Urge returned" taps — edit if needed.`
-        : `No active urge tracked — leave blank or estimate manually.`}
-    </div>`;
+    </div>` : ''}`;
+  }
+  return summaryHtml + legacyHtml;
 }
 
 function renderEntryPanel(type) {
@@ -768,6 +909,18 @@ function renderIntakePanel() {
     </div>`;
 }
 
+function renderUrineColorField() {
+  return `
+    <div class="field-caption">Urine color</div>
+    <div class="color-row">
+      ${URINE_COLORS.map((c) => `
+        <button class="color-btn ${state.pendingColor === c.level ? 'active' : ''}" onclick="setPendingColor(${c.level})">
+          <span class="color-swatch" style="background:${c.color}"></span>
+          <span>${c.level}</span>
+        </button>`).join('')}
+    </div>`;
+}
+
 function renderOutputPanel() {
   const accent = 'var(--amber)';
   return `
@@ -779,6 +932,7 @@ function renderOutputPanel() {
       ${renderTimePicker()}
       ${renderAmountStepper()}
       ${renderUrgencyLeakControls()}
+      ${renderUrineColorField()}
       <div class="field-caption">Location</div>
       <div class="urgency-row">
         <button class="urgency-btn ${state.pendingLocation === 'none' ? 'active' : ''}" onclick="setPendingLocation('none')">None</button>
@@ -822,6 +976,22 @@ function computeRangeStats(range) {
   const totalNightVoid = filteredDayAggs.reduce((s, d) => s + d.nightOut, 0);
   const includesOpenPeriod = filteredDayAggs.some((d) => d.open);
 
+  // Sensation-event analytics: events attributed to each void in range.
+  const voidSensations = voidEntries.map((e) => ({ void: e, ...sensationsForVoid(e) }));
+  const eventsInRange = sensationEvents.filter((sv) => { const dk = isoDate(sv.timestamp); return dk >= range.start && dk <= range.end; });
+  const totalPressureEvents = eventsInRange.filter((sv) => sv.kind === 'pressure').length;
+  const totalUrgeEvents = eventsInRange.filter((sv) => sv.kind === 'urge').length;
+  const techniqueCounts = TECHNIQUES.map((t) => ({ technique: t, count: eventsInRange.filter((sv) => sv.technique === t).length }));
+  const eventsPerVoidItems = voidSensations.map((vs) => ({ value: vs.events.length, date: vs.void.timestamp }));
+  const eventsPerVoidStats = statsFromValues(eventsPerVoidItems);
+  // Time from first held-off sensation to the void (backward-looking hold duration).
+  const holdItems = voidSensations
+    .filter((vs) => vs.firstEventMs != null)
+    .map((vs) => ({ value: Math.round((new Date(vs.void.timestamp).getTime() - vs.firstEventMs) / 60000), date: vs.void.timestamp }));
+  const holdStats = statsFromValues(holdItems);
+  const colorEntries = voidEntries.filter((e) => e.color != null);
+  const medianColor = colorEntries.length ? Math.round(median(colorEntries.map((e) => e.color))) : null;
+
   return {
     range, dayAggs, filteredDayAggs, filteredEntries, voidEntries,
     days: filteredDayAggs.length,
@@ -830,6 +1000,8 @@ function computeRangeStats(range) {
     avgDayVoids, avgNightVoids, overallLeakRate, medianUrgencyLabel, crosstab,
     suppressionStats, avgUrgeWaves, includesOpenPeriod,
     totalDayIntake, totalDayVoid, totalNightIntake, totalNightVoid,
+    totalPressureEvents, totalUrgeEvents, techniqueCounts, eventsPerVoidStats, holdStats,
+    medianColor,
   };
 }
 
@@ -864,6 +1036,7 @@ function renderInsightsTab() {
   const freqRows = groupFrequency(s.filteredDayAggs, state.granularity).slice(-8);
   const entryDateMap = buildEntryDateMap(entries);
   const urgencyTrendRows = groupUrgencyTrend(s.voidEntries, state.granularity, entryDateMap).slice(-8);
+  const colorTrendRows = groupColorTrend(s.voidEntries, state.granularity, entryDateMap).slice(-8);
   const suppressionItemsWithKey = s.voidEntries.filter((e) => e.suppressionMinutes != null).map((e) => ({ value: e.suppressionMinutes, date: e.timestamp, dateKey: entryDateMap[e.id] }));
   const suppressionTrendRows = groupSuppressionTrend(suppressionItemsWithKey, state.granularity).slice(-8);
 
@@ -954,6 +1127,23 @@ function renderInsightsTab() {
         </div>`).join('')}
     </div>
     <div class="card">
+      <div class="card-title">Urine color</div>
+      <div class="stat-row"><span class="label">Median color</span><span class="value" style="display:flex;align-items:center;gap:6px;">
+        ${s.medianColor != null ? `<span class="color-swatch" style="width:14px;height:14px;background:${URINE_COLORS[s.medianColor - 1].color}"></span>${s.medianColor}` : '—'}
+      </span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">1 (lightest) to 4 (darkest) — a rough hydration proxy.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Urine color trend</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Uses the same day/week/month toggle as above. Only voids with a recorded color are counted.</div>
+      ${colorTrendRows.length ? colorTrendRows.map((row) => `
+        <div class="freq-row">
+          <div class="f1">${row.label}</div>
+          <div class="f2" style="display:flex;align-items:center;gap:5px;justify-content:flex-end;"><span class="color-swatch" style="width:11px;height:11px;background:${URINE_COLORS[row.medianColor - 1].color}"></span>${row.medianColor}</div>
+          <div class="f2" style="color:var(--muted2)">${row.count} tracked</div>
+        </div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No colors recorded in this range yet.</div>`}
+    </div>
+    <div class="card">
       <div class="card-title">Urgency &amp; leak trend</div>
       <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Uses the same day/week/month toggle as void frequency above.</div>
       ${urgencyTrendRows.map((row) => `
@@ -968,13 +1158,26 @@ function renderInsightsTab() {
     ${renderMinuteDurationCard('Urge suppression duration', s.suppressionStats, 'var(--gold)')}
     <div class="card">
       <div class="card-title">Urge suppression trend</div>
-      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Uses the same day/week/month toggle as above. Only voids with a recorded suppression duration are counted.</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Legacy data from the old episode model — only voids with a recorded suppression duration are counted.</div>
       ${suppressionTrendRows.length ? suppressionTrendRows.map((row) => `
         <div class="freq-row">
           <div class="f1">${row.label}</div>
           <div class="f2" style="color:var(--gold)">${Math.round(row.medianMinutes)}m median</div>
           <div class="f2" style="color:var(--muted2)">${row.count} tracked</div>
-        </div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No suppression durations recorded in this range yet.</div>`}
+        </div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No suppression durations recorded in this range.</div>`}
+    </div>
+    <div class="card">
+      <div class="card-title">Held-off sensations</div>
+      <div class="stat-row"><span class="label">Pressure events</span><span class="value" style="color:#6FD9D9">${s.totalPressureEvents}</span></div>
+      <div class="stat-row"><span class="label">Urge events</span><span class="value" style="color:var(--gold)">${s.totalUrgeEvents}</span></div>
+      <div class="stat-row"><span class="label">Events per void (median)</span><span class="value" style="color:#6FD9D9">${s.eventsPerVoidStats ? Math.round(s.eventsPerVoidStats.median * 10) / 10 : '—'}</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Each event = a moment pressure or urgency got strong enough to engage a technique. Silence between events is the success signal.</div>
+    </div>
+    ${renderMinuteDurationCard('First sensation → void', s.holdStats, '#6FD9D9')}
+    <div class="card">
+      <div class="card-title">Techniques used</div>
+      ${s.techniqueCounts.some((r) => r.count > 0) ? s.techniqueCounts.map((row) => `
+        <div class="stat-row"><span class="label">${row.technique}</span><span class="value" style="color:#6FD9D9">${row.count}</span></div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No sensation events recorded in this range yet.</div>`}
     </div>`;
   return html;
 }
@@ -993,7 +1196,7 @@ function renderDurationCard(title, stat, color) {
 }
 
 function renderMinuteDurationCard(title, stat, color) {
-  if (!stat) return `<div class="card"><div class="card-title">${title}</div><div style="font-size:12px;color:var(--muted2);">No suppression durations recorded in this range yet — tap "I feel an urge" on the Log tab, or fill in the field manually when logging output.</div></div>`;
+  if (!stat) return `<div class="card"><div class="card-title">${title}</div><div style="font-size:12px;color:var(--muted2);">Nothing recorded in this range yet.</div></div>`;
   const fmtMin = (m) => `${Math.round(m)}m`;
   return `
     <div class="card">
@@ -1067,6 +1270,14 @@ function renderCompareTab() {
       ${compareRow('Leak rate', a.overallLeakRate != null ? a.overallLeakRate + '%' : '—', b.overallLeakRate != null ? b.overallLeakRate + '%' : '—')}
       ${compareRow('Suppression duration (median)', mMin(a.suppressionStats), mMin(b.suppressionStats))}
       ${compareRow('Urge returns (avg)', a.avgUrgeWaves != null ? a.avgUrgeWaves.toFixed(1) : '—', b.avgUrgeWaves != null ? b.avgUrgeWaves.toFixed(1) : '—')}
+    </div>
+    <div class="card">
+      <div class="card-title">Held-off sensations</div>
+      ${compareRow('Pressure events', a.totalPressureEvents, b.totalPressureEvents)}
+      ${compareRow('Urge events', a.totalUrgeEvents, b.totalUrgeEvents)}
+      ${compareRow('Events per void (median)', a.eventsPerVoidStats ? Math.round(a.eventsPerVoidStats.median * 10) / 10 : '—', b.eventsPerVoidStats ? Math.round(b.eventsPerVoidStats.median * 10) / 10 : '—')}
+      ${compareRow('First sensation → void (median)', mMin(a.holdStats), mMin(b.holdStats))}
+      ${compareRow('Median urine color', a.medianColor != null ? a.medianColor : '—', b.medianColor != null ? b.medianColor : '—')}
     </div>`;
 }
 function compareRow(label, a, b) {
