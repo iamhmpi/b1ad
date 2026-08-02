@@ -250,7 +250,7 @@ let sensationEvents = []; // [{ id, kind: 'pressure'|'urge', technique, timestam
 try { const raw = localStorage.getItem(SENSATION_KEY); sensationEvents = raw ? JSON.parse(raw) : []; } catch (e) { sensationEvents = []; }
 function saveSensationEvents() { localStorage.setItem(SENSATION_KEY, JSON.stringify(sensationEvents)); }
 
-const TRIGGERS = ['Access +', 'JIC', 'Unknown', 'None'];
+const TRIGGERS = ['Access +', 'JIC', '?', 'None'];
 const RESPONSES = ['Relax/distract', 'Movement', 'Kegel'];
 
 function beginSensation(kind) { state.sensationPicking = kind; state.pendingTrigger = null; state.pendingResponses = []; render(); }
@@ -586,7 +586,7 @@ function gapForEntry(ascAll, entry) {
 
 /* ============================= ACTIONS ============================= */
 function setTab(t) { state.tab = t; state.panel = null; render(); }
-function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = type === 'in' ? 'Water' : ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
+function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = type === 'out' ? '1' : 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = type === 'in' ? 'Water' : ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
 function closePanel() { state.panel = null; state.editingId = null; state.customAmount = null; state.customLabel = ''; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
 function setPendingFlag(f) { state.pendingFlag = state.pendingFlag === f ? null : f; render(); }
 function setPendingUrgency(u) { state.pendingUrgency = state.pendingUrgency === u ? 'none' : u; render(); }
@@ -742,13 +742,17 @@ function renderLogTab() {
           <span class="msg" style="color:${accent};">${isP ? '🌊 Pressure' : '⚡ Urge'}</span>
           <button style="border:1px solid ${accent};color:${accent};background:none;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer;" onclick="cancelSensation()">✕</button>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:${accent};min-width:56px;">Trigger</span>
-          ${TRIGGERS.map((t) => btn(t, state.pendingTrigger === t, `setPendingTrigger('${t}')`)).join('')}
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:11px;color:${accent};">Trigger</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${TRIGGERS.map((t) => btn(t, state.pendingTrigger === t, `setPendingTrigger('${t}')`)).join('')}
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:${accent};min-width:56px;">Response</span>
-          ${RESPONSES.map((r) => btn(r, state.pendingResponses.includes(r), `togglePendingResponse('${r}')`)).join('')}
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:11px;color:${accent};">Response</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${RESPONSES.map((r) => btn(r, state.pendingResponses.includes(r), `togglePendingResponse('${r}')`)).join('')}
+          </div>
         </div>
         <button style="border:none;background:${accent};color:#0E1E23;border-radius:8px;padding:8px 0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Spectral',serif;" onclick="logSensation()">Log ${isP ? 'pressure' : 'urge'} event</button>
       </div>`;
@@ -861,16 +865,15 @@ function renderAmountStepper() {
   const step = isOz ? 1 : 50;
   return `
     <div class="field-caption">Amount</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <div class="stepper" style="margin-bottom:0;">
-        <button onclick="setCustomAmount((${displayVal || 0}) - ${step})">−</button>
-        <input type="text" inputmode="decimal" placeholder="${isOz ? 'oz' : 'mL'}" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
-        <button onclick="setCustomAmount((${displayVal || 0}) + ${step})">+</button>
-      </div>
-      <span style="display:flex;gap:6px;margin-left:auto;">
-        <button style="border:1px solid ${!isOz ? 'var(--text)' : 'var(--border)'};color:${!isOz ? '#0E1E23' : 'var(--muted)'};background:${!isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('mL')">mL</button>
-        <button style="border:1px solid ${isOz ? 'var(--text)' : 'var(--border)'};color:${isOz ? '#0E1E23' : 'var(--muted)'};background:${isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('oz')">oz</button>
-      </span>
+    <div class="stepper" style="margin-bottom:8px;">
+      <button onclick="setCustomAmount((${displayVal || 0}) - ${step})">−</button>
+      <input type="text" inputmode="decimal" placeholder="${isOz ? 'oz' : 'mL'}" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
+      <span style="color:var(--muted2);font-size:13px">${isOz ? 'oz' : 'mL'}</span>
+      <button onclick="setCustomAmount((${displayVal || 0}) + ${step})">+</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button style="border:1px solid ${!isOz ? 'var(--text)' : 'var(--border)'};color:${!isOz ? '#0E1E23' : 'var(--muted)'};background:${!isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('mL')">mL</button>
+      <button style="border:1px solid ${isOz ? 'var(--text)' : 'var(--border)'};color:${isOz ? '#0E1E23' : 'var(--muted)'};background:${isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('oz')">oz</button>
     </div>`;
 }
 
