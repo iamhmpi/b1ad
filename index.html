@@ -250,20 +250,30 @@ let sensationEvents = []; // [{ id, kind: 'pressure'|'urge', technique, timestam
 try { const raw = localStorage.getItem(SENSATION_KEY); sensationEvents = raw ? JSON.parse(raw) : []; } catch (e) { sensationEvents = []; }
 function saveSensationEvents() { localStorage.setItem(SENSATION_KEY, JSON.stringify(sensationEvents)); }
 
-const TECHNIQUES = ['Relaxation', 'Distraction', 'Kegel flicks', 'Combination'];
+const TRIGGERS = ['Access +', 'JIC', 'Unknown', 'None'];
+const RESPONSES = ['Relax/distract', 'Movement', 'Kegel'];
 
-function beginSensation(kind) { state.sensationPicking = kind; render(); }
-function cancelSensation() { state.sensationPicking = null; render(); }
-function logSensation(technique) {
+function beginSensation(kind) { state.sensationPicking = kind; state.pendingTrigger = null; state.pendingResponses = []; render(); }
+function cancelSensation() { state.sensationPicking = null; state.pendingTrigger = null; state.pendingResponses = []; render(); }
+function setPendingTrigger(t) { state.pendingTrigger = state.pendingTrigger === t ? null : t; render(); }
+function togglePendingResponse(r) {
+  const i = state.pendingResponses.indexOf(r);
+  if (i >= 0) state.pendingResponses.splice(i, 1); else state.pendingResponses.push(r);
+  render();
+}
+function logSensation() {
   if (!state.sensationPicking) return;
   sensationEvents.push({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     kind: state.sensationPicking,
-    technique,
+    trigger: state.pendingTrigger || 'None',
+    responses: [...state.pendingResponses],
     timestamp: new Date().toISOString(),
   });
   saveSensationEvents();
   state.sensationPicking = null;
+  state.pendingTrigger = null;
+  state.pendingResponses = [];
   render();
 }
 function deleteSensation(id) { sensationEvents = sensationEvents.filter((s) => s.id !== id); saveSensationEvents(); render(); }
@@ -298,7 +308,9 @@ let state = {
   pendingSuppressionMinutes: null, // number | null — legacy field, still shown when editing older entries that have it
   pendingUrgeWaves: null, // number | null — legacy field, still shown when editing older entries that have it
   pendingPressureMinutes: null, // number | null — legacy field, still shown when editing older entries that have it
-  sensationPicking: null, // 'pressure' | 'urge' | null — which sensation's technique picker is open
+  sensationPicking: null, // 'pressure' | 'urge' | null — which sensation's picker is open
+  pendingTrigger: null, // string | null — single-choice trigger for the sensation being logged
+  pendingResponses: [], // string[] — multi-select responses for the sensation being logged
   editingId: null, // entry id being edited, or null when adding a new entry
   pendingTimestamp: null, // string (datetime-local value) | null — null means "now"
   insightsRange: null,   // { start, end }
@@ -307,15 +319,23 @@ let state = {
   compareB: null,
 };
 
-const URGENCY_LEVELS = ['none', 'small', 'moderate', 'significant', 'severe'];
+// New scale: 'none' (default) plus 1-3. Older entries may still carry the legacy
+// five-level labels; urgencyIndex maps both onto a comparable 0-3 range for stats.
+const URGENCY_LEVELS = ['none', '1', '2', '3'];
+const LEGACY_URGENCY_INDEX = { none: 0, small: 1, moderate: 2, significant: 3, severe: 3 };
 const URINE_COLORS = [
   { level: 1, color: '#F5F0C9' },
   { level: 2, color: '#EAD86A' },
   { level: 3, color: '#D9A441' },
   { level: 4, color: '#8C5A2B' },
 ];
-function urgencyIndex(u) { const i = URGENCY_LEVELS.indexOf(u || 'none'); return i < 0 ? 0 : i; }
-function urgencyLabelCap(u) { const s = u || 'none'; return s.charAt(0).toUpperCase() + s.slice(1); }
+function urgencyIndex(u) {
+  const s = u == null ? 'none' : String(u);
+  if (LEGACY_URGENCY_INDEX[s] != null) return LEGACY_URGENCY_INDEX[s];
+  const i = URGENCY_LEVELS.indexOf(s);
+  return i < 0 ? 0 : i;
+}
+function urgencyLabelCap(u) { const s = u == null ? 'none' : String(u); return s.charAt(0).toUpperCase() + s.slice(1); }
 
 /* ============================= HELPERS ============================= */
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
@@ -566,10 +586,10 @@ function gapForEntry(ascAll, entry) {
 
 /* ============================= ACTIONS ============================= */
 function setTab(t) { state.tab = t; state.panel = null; render(); }
-function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
+function openPanel(type) { state.panel = state.panel === type ? null : type; state.editingId = null; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.customAmount = null; state.customLabel = type === 'in' ? 'Water' : ''; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
 function closePanel() { state.panel = null; state.editingId = null; state.customAmount = null; state.customLabel = ''; state.pendingFlag = null; state.pendingUrgency = 'none'; state.pendingLeak = false; state.pendingLocation = 'none'; state.pendingTimestamp = null; state.pendingSuppressionMinutes = null; state.pendingUrgeWaves = null; state.pendingPressureMinutes = null; state.pendingUnit = 'mL'; state.pendingColor = null; render(); }
 function setPendingFlag(f) { state.pendingFlag = state.pendingFlag === f ? null : f; render(); }
-function setPendingUrgency(u) { state.pendingUrgency = u; render(); }
+function setPendingUrgency(u) { state.pendingUrgency = state.pendingUrgency === u ? 'none' : u; render(); }
 function setPendingLeak(v) { state.pendingLeak = v; render(); }
 function setPendingLocation(v) { state.pendingLocation = v; render(); }
 function setPendingColor(v) { state.pendingColor = state.pendingColor === v ? null : v; render(); }
@@ -674,7 +694,8 @@ function exportExcel() {
     Date: isoDate(s.timestamp),
     Time: new Date(s.timestamp).toLocaleTimeString(),
     Sensation: s.kind === 'pressure' ? 'Pressure' : 'Urge',
-    Technique: s.technique,
+    Trigger: s.trigger || '',
+    Responses: (s.responses || []).join(', '),
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entryRows), 'Entries');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Daily Summary');
@@ -711,24 +732,37 @@ function renderLogTab() {
 
   if (state.sensationPicking && !paused) {
     const isP = state.sensationPicking === 'pressure';
+    const accent = isP ? '#6FD9D9' : 'var(--gold)';
+    const bg = isP ? '#16323A' : '#2E2A17';
+    const btn = (label, active, onclick) =>
+      `<button style="border:1px solid ${accent};color:${active ? '#0E1E23' : accent};background:${active ? accent : 'transparent'};border-radius:7px;padding:5px 11px;font-size:12px;cursor:pointer;white-space:nowrap;" onclick="${onclick}">${label}</button>`;
     html += `
-      <div class="pressure-banner" style="${isP ? '' : 'background:#2E2A17;border-color:var(--gold);'}">
-        <span class="msg" style="${isP ? '' : 'color:var(--gold);'}">${isP ? '🌊 Pressure' : '⚡ Urge'} — what are you using?</span>
-        <span style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${TECHNIQUES.map((t) => `<button style="${isP ? '' : 'border-color:var(--gold);color:var(--gold);'}" onclick="logSensation('${t}')">${t}</button>`).join('')}
-          <button style="${isP ? '' : 'border-color:var(--gold);color:var(--gold);'}" onclick="cancelSensation()">✕</button>
-        </span>
+      <div class="pressure-banner" style="background:${bg};border-color:${accent};flex-direction:column;align-items:stretch;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="msg" style="color:${accent};">${isP ? '🌊 Pressure' : '⚡ Urge'}</span>
+          <button style="border:1px solid ${accent};color:${accent};background:none;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer;" onclick="cancelSensation()">✕</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:${accent};min-width:56px;">Trigger</span>
+          ${TRIGGERS.map((t) => btn(t, state.pendingTrigger === t, `setPendingTrigger('${t}')`)).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:${accent};min-width:56px;">Response</span>
+          ${RESPONSES.map((r) => btn(r, state.pendingResponses.includes(r), `togglePendingResponse('${r}')`)).join('')}
+        </div>
+        <button style="border:none;background:${accent};color:#0E1E23;border-radius:8px;padding:8px 0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Spectral',serif;" onclick="logSensation()">Log ${isP ? 'pressure' : 'urge'} event</button>
       </div>`;
   } else if (!paused) {
     const recentEvs = sensationsSincePrevVoid(new Date().toISOString());
-    const evNote = recentEvs.length
-      ? `<div style="font-size:11px;color:#6FD9D9;margin-bottom:10px;">${recentEvs.filter((s)=>s.kind==='pressure').length} pressure + ${recentEvs.filter((s)=>s.kind==='urge').length} urge event${recentEvs.length === 1 ? '' : 's'} held off since last void</div>`
-      : '';
     html += `
-      <div style="display:flex;gap:8px;margin-bottom:${recentEvs.length ? '6' : '16'}px;">
-        <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('pressure')">🌊 Pressure</button>
-        <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('urge')">⚡ Urge</button>
-      </div>${evNote}`;
+      <div style="border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:16px;">
+        <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Log a sensation</div>
+        <div style="display:flex;gap:8px;">
+          <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('pressure')">🌊 Pressure</button>
+          <button class="urge-start-btn" style="margin-bottom:0;width:auto;flex:1;" onclick="beginSensation('urge')">⚡ Urge</button>
+        </div>
+        ${recentEvs.length ? `<div style="font-size:11px;color:#6FD9D9;margin-top:8px;">${recentEvs.filter((s)=>s.kind==='pressure').length} pressure + ${recentEvs.filter((s)=>s.kind==='urge').length} urge event${recentEvs.length === 1 ? '' : 's'} held off since last void</div>` : ''}
+      </div>`;
   }
 
   html += `
@@ -794,16 +828,21 @@ function renderLogTab() {
 }
 
 function renderUrgencyLeakControls() {
+  const pill = (label, active, onclick, accent) =>
+    `<button style="border:1px solid ${accent};color:${active ? '#0E1E23' : accent};background:${active ? accent : 'transparent'};border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;" onclick="${onclick}">${label}</button>`;
   return `
-    <div class="field-caption">Peak urgency this episode</div>
-    <div class="urgency-row">
-      ${URGENCY_LEVELS.map((u) => `<button class="urgency-btn ${state.pendingUrgency === u ? 'active' : ''}" onclick="setPendingUrgency('${u}')">${urgencyLabelCap(u)}</button>`).join('')}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
+      <span class="field-caption" style="margin:0;">Peak urgency</span>
+      <span style="display:flex;gap:6px;">
+        ${['1', '2', '3'].map((u) => pill(u, state.pendingUrgency === u, `setPendingUrgency('${u}')`, '#F0A5A5')).join('')}
+      </span>
     </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px;">The strongest it got, not necessarily how it felt right at the end.</div>
-    <div class="field-caption">Leak beforehand?</div>
-    <div class="leak-row">
-      <button class="leak-btn ${!state.pendingLeak ? 'active-no' : ''}" onclick="setPendingLeak(false)">No</button>
-      <button class="leak-btn ${state.pendingLeak ? 'active-yes' : ''}" onclick="setPendingLeak(true)">Yes</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;">
+      <span class="field-caption" style="margin:0;">Leak beforehand?</span>
+      <span style="display:flex;gap:6px;">
+        ${pill('No', !state.pendingLeak, 'setPendingLeak(false)', 'var(--muted2)')}
+        ${pill('Yes', state.pendingLeak, 'setPendingLeak(true)', '#F0A5A5')}
+      </span>
     </div>`;
 }
 
@@ -822,15 +861,16 @@ function renderAmountStepper() {
   const step = isOz ? 1 : 50;
   return `
     <div class="field-caption">Amount</div>
-    <div class="stepper" style="margin-bottom:8px;">
-      <button onclick="setCustomAmount((${displayVal || 0}) - ${step})">−</button>
-      <input type="text" inputmode="decimal" placeholder="${isOz ? 'oz' : 'mL'}" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
-      <span style="color:var(--muted2);font-size:13px">${isOz ? 'oz' : 'mL'}</span>
-      <button onclick="setCustomAmount((${displayVal || 0}) + ${step})">+</button>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:16px;">
-      <button class="urgency-btn ${!isOz ? 'active' : ''}" onclick="setUnit('mL')" style="flex:none;padding:4px 14px;">mL</button>
-      <button class="urgency-btn ${isOz ? 'active' : ''}" onclick="setUnit('oz')" style="flex:none;padding:4px 14px;">oz</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="stepper" style="margin-bottom:0;">
+        <button onclick="setCustomAmount((${displayVal || 0}) - ${step})">−</button>
+        <input type="text" inputmode="decimal" placeholder="${isOz ? 'oz' : 'mL'}" value="${displayVal}" oninput="state.customAmount = this.value === '' ? null : (Number(this.value)||0)" />
+        <button onclick="setCustomAmount((${displayVal || 0}) + ${step})">+</button>
+      </div>
+      <span style="display:flex;gap:6px;margin-left:auto;">
+        <button style="border:1px solid ${!isOz ? 'var(--text)' : 'var(--border)'};color:${!isOz ? '#0E1E23' : 'var(--muted)'};background:${!isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('mL')">mL</button>
+        <button style="border:1px solid ${isOz ? 'var(--text)' : 'var(--border)'};color:${isOz ? '#0E1E23' : 'var(--muted)'};background:${isOz ? 'var(--text)' : 'transparent'};border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;" onclick="setUnit('oz')">oz</button>
+      </span>
     </div>`;
 }
 
@@ -933,12 +973,6 @@ function renderOutputPanel() {
       ${renderAmountStepper()}
       ${renderUrgencyLeakControls()}
       ${renderUrineColorField()}
-      <div class="field-caption">Location</div>
-      <div class="urgency-row">
-        <button class="urgency-btn ${state.pendingLocation === 'none' ? 'active' : ''}" onclick="setPendingLocation('none')">None</button>
-        <button class="urgency-btn ${state.pendingLocation === 'arriving' ? 'active' : ''}" onclick="setPendingLocation('arriving')">Arriving</button>
-        <button class="urgency-btn ${state.pendingLocation === 'departing' ? 'active' : ''}" onclick="setPendingLocation('departing')">Departing</button>
-      </div>
       ${renderSuppressionField()}
       ${renderFlagRow()}
       <button class="add-confirm" style="background:${accent}" onclick="addEntry('out', state.customAmount, 'Void')">${state.editingId ? 'Update' : 'Add'}</button>
@@ -981,7 +1015,8 @@ function computeRangeStats(range) {
   const eventsInRange = sensationEvents.filter((sv) => { const dk = isoDate(sv.timestamp); return dk >= range.start && dk <= range.end; });
   const totalPressureEvents = eventsInRange.filter((sv) => sv.kind === 'pressure').length;
   const totalUrgeEvents = eventsInRange.filter((sv) => sv.kind === 'urge').length;
-  const techniqueCounts = TECHNIQUES.map((t) => ({ technique: t, count: eventsInRange.filter((sv) => sv.technique === t).length }));
+  const triggerCounts = TRIGGERS.map((t) => ({ label: t, count: eventsInRange.filter((sv) => (sv.trigger || 'None') === t).length }));
+  const responseCounts = RESPONSES.map((r) => ({ label: r, count: eventsInRange.filter((sv) => (sv.responses || []).includes(r)).length }));
   const eventsPerVoidItems = voidSensations.map((vs) => ({ value: vs.events.length, date: vs.void.timestamp }));
   const eventsPerVoidStats = statsFromValues(eventsPerVoidItems);
   // Time from first held-off sensation to the void (backward-looking hold duration).
@@ -1000,7 +1035,7 @@ function computeRangeStats(range) {
     avgDayVoids, avgNightVoids, overallLeakRate, medianUrgencyLabel, crosstab,
     suppressionStats, avgUrgeWaves, includesOpenPeriod,
     totalDayIntake, totalDayVoid, totalNightIntake, totalNightVoid,
-    totalPressureEvents, totalUrgeEvents, techniqueCounts, eventsPerVoidStats, holdStats,
+    totalPressureEvents, totalUrgeEvents, triggerCounts, responseCounts, eventsPerVoidStats, holdStats,
     medianColor,
   };
 }
@@ -1175,9 +1210,15 @@ function renderInsightsTab() {
     </div>
     ${renderMinuteDurationCard('First sensation → void', s.holdStats, '#6FD9D9')}
     <div class="card">
-      <div class="card-title">Techniques used</div>
-      ${s.techniqueCounts.some((r) => r.count > 0) ? s.techniqueCounts.map((row) => `
-        <div class="stat-row"><span class="label">${row.technique}</span><span class="value" style="color:#6FD9D9">${row.count}</span></div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No sensation events recorded in this range yet.</div>`}
+      <div class="card-title">Triggers</div>
+      ${s.triggerCounts.some((r) => r.count > 0) ? s.triggerCounts.map((row) => `
+        <div class="stat-row"><span class="label">${row.label}</span><span class="value" style="color:#6FD9D9">${row.count}</span></div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No sensation events recorded in this range yet.</div>`}
+    </div>
+    <div class="card">
+      <div class="card-title">Responses used</div>
+      ${s.responseCounts.some((r) => r.count > 0) ? s.responseCounts.map((row) => `
+        <div class="stat-row"><span class="label">${row.label}</span><span class="value" style="color:#6FD9D9">${row.count}</span></div>`).join('') : `<div style="font-size:12px;color:var(--muted2);">No responses recorded in this range yet.</div>`}
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Counts exceed event totals when multiple responses were used for one event.</div>
     </div>`;
   return html;
 }
@@ -1285,7 +1326,7 @@ function compareRow(label, a, b) {
 }
 
 /* ============================= MAIN RENDER ============================= */
-function escapeHtml(s) { const d = document.createElement('div'); d.innerText = s == null ? '' : s; return d.innerHTML; }
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML.replace(/"/g, '&quot;'); }
 
 function render() {
   const app = document.getElementById('app');
